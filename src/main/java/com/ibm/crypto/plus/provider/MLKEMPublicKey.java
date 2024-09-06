@@ -20,7 +20,7 @@ import java.security.spec.InvalidParameterSpecException;
 import java.util.Arrays;
 import javax.security.auth.DestroyFailedException;
 import javax.security.auth.Destroyable;
-import com.ibm.crypto.plus.provider.ock.MLKEMKey;
+import com.ibm.crypto.plus.provider.ock.OCKMLKEMKey;
 import sun.security.util.DerInputStream;
 import sun.security.util.DerOutputStream;
 import sun.security.util.DerValue;
@@ -45,7 +45,7 @@ final class MLKEMPublicKey extends X509Key
 
 
     private transient boolean destroyed = false;
-    private transient MLKEMKey  mlkemKey= null; // Transient per tag [SERIALIZATION] in DesignNotes.txt
+    private transient OCKMLKEMKey  mlkemKey= null; // Transient per tag [SERIALIZATION] in DesignNotes.txt
 
     public MLKEMPublicKey(OpenJCEPlusProvider provider, byte rawKeyD, BigInteger k)
             throws InvalidKeyException {
@@ -71,7 +71,7 @@ final class MLKEMPublicKey extends X509Key
         this.encodedKey = getEncoded();
     }
 
-    public MLEKMPublicKey(OpenJCEPlusProvider provider, MLKEMKey mlkemKey) {
+    public MLEKMPublicKey(OpenJCEPlusProvider provider, OCKMLKEMKey mlkemKey) {
         try {
             this.provider = provider;
             convertOCKPublicKeyBytes(mlkemKey.getPublicKeyBytes());

@@ -16,7 +16,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGeneratorSpi;
 import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
-import com.ibm.crypto.plus.provider.ock.MLKEMKey;
+import com.ibm.crypto.plus.provider.ock.OCKMLKEMKey;
 import sun.security.x509.AlgorithmId;
 import ibm.security.internal.spec.MLKEMParameterSpec;
 import ibm.security.internal.interfaces.MLKEMKey;
@@ -28,24 +28,34 @@ abstract class RMLKEMKeyPairGenerator extends KeyPairGeneratorSpi {
 
     static int DEF_MLKEM_KEY_SIZE = 512;
     private MLKEMParameterSpec mlkemSpec = null;
-    private AlgorithmId mlkemId;
+    private String mlkemAlg;
+    private int keysize = 0;
 
 
     public MLKEMKeyPairGenerator(OpenJCEPlusProvider provider) {
         this.provider = provider;
         this.keysize = DEF_MLKEM_KEY_SIZE;
+        this.mlkemAlg = "ML_KEM_512";
+    }
+
+    public MLKEMKeyPairGenerator(OpenJCEPlusProvider provider, int keySize, String algName) {
+        this.provider = provider;
+        this.keysize = keySize;
+        this.mlkemAlg = algName;
     }
 
     @Override
-    public void initialize(int keysize, SecureRandom random) throws InvalidParameterException {
-        this.keysize = keysize;
+    public void initialize(int keySize, SecureRandom random) throws InvalidParameterException {
+        //Key size is determined by the algorithm.
+        if (this.keysize != keySize) {
+            throw new InvalidParameterException("Key size does not match algorithm.");
+        }
+        this.keysize = keySize;
         this.mlkemSpec = null;
-        this.oid = null;
-        this.random = null; //OCKC defines the securerandom used and can not be specified on the fly.
     }
 
     /**
-     * To-Do Currently we cannot generate curves based on parameters.
+     * Initialize based on parameters.
      */
     public void initialize(AlgorithmParameterSpec params, SecureRandom random)
             throws InvalidAlgorithmParameterException {
@@ -56,8 +66,9 @@ abstract class RMLKEMKeyPairGenerator extends KeyPairGeneratorSpi {
         }
 
         this.mlkemSpec = (MLKEMParameterSpec) params;
-        this.keysize = mlkemSpec.getKeySize();
-        this.random = null; //OCKC defines the securerandom used and can not be specified on the fly.
+        if (this.keysize != mlkemSpec.getKeySize()) {
+            throw new InvalidAlgorithmParameterException("Parameters do not match algorithm.");
+        }
     }
 
 
@@ -71,6 +82,25 @@ abstract class RMLKEMKeyPairGenerator extends KeyPairGeneratorSpi {
         } catch (Exception e) {
             throw provider.providerException("Failure in generateKeyPair", e);
         }
+    }
+    private String getAlgName(int keySize) {
+        String result = null;
+        switch (keySize) {
+            case 512:
+                result = "ML_KEM_512";
+                break;
+            case 768:
+                result = "ML_KEM_786";
+                break;
+            case 1024:
+                result = "ML_KEM_1024";
+                break;
+            default:
+                //Not sure how we got here. But will default to 512
+                result = "ML_KEM_512";
+                break;
+
+        return result;
     }
 
   
