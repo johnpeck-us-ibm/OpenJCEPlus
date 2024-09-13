@@ -8,9 +8,11 @@
 
 package com.ibm.crypto.plus.provider;
 
+import com.ibm.crypto.plus.provider.ock.OCKMLKEMKey;
+import ibm.security.internal.spec.MLKEMParameterSpec;
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
+import java.io.IOException;
 import java.io.Serializable;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
@@ -18,18 +20,20 @@ import java.security.KeyRep;
 import java.security.PublicKey;
 import java.security.spec.InvalidParameterSpecException;
 import java.util.Arrays;
-import javax.security.auth.DestroyFailedException;
 import javax.security.auth.Destroyable;
-import com.ibm.crypto.plus.provider.ock.OCKMLKEMKey;
+import javax.security.auth.DestroyFailedException;
+import sun.security.util.BitArray;
 import sun.security.util.DerInputStream;
 import sun.security.util.DerOutputStream;
 import sun.security.util.DerValue;
 import sun.security.util.ObjectIdentifier;
+import sun.security.x509.AlgorithmId;
 import sun.security.x509.X509Key;
+
 
 @SuppressWarnings("restriction")
 final class MLKEMPublicKey extends X509Key
-        implements javax.crypto.interfaces.MLKEMPublicKey, PublicKey, Serializable, Destroyable {
+        implements PublicKey, Serializable, Destroyable {
 
     /**
      * 
@@ -41,42 +45,43 @@ final class MLKEMPublicKey extends X509Key
     private MLKEMParameters mlkemParams = null;
     private byte[] key = null;
     private byte[] encodedKey = null;
-   
-
 
     private transient boolean destroyed = false;
     private transient OCKMLKEMKey  mlkemKey= null; // Transient per tag [SERIALIZATION] in DesignNotes.txt
 
-    public MLKEMPublicKey(OpenJCEPlusProvider provider, byte rawKeyD, BigInteger k)
+    public MLKEMPublicKey(AlgorithmId algId, OpenJCEPlusProvider provider, byte[] rawKeyE)
             throws InvalidKeyException {
-        this(provider, rawKeyD, k);
+        this.algid = algId;
+        this.provider = provider;
+        this.key = rawKeyE;
+        setKey(new BitArray(this.key.length * 8, this.key));
+
+        try {
+            this.mlkemKey = OCKMLKEMKey.createPublicKey(provider.getOCKContext(), this.key);
+        } catch (Exception exception) {
+            InvalidKeyException ike = new InvalidKeyException("Failed to create RSA public key");
+            provider.setOCKExceptionCause(ike, exception);
+            throw ike;
+        }
     }
 
     /**
-     * Make a DH public key out of a public value <code>y</code>, a prime modulus
-     * <code>p</code>, a base generator <code>g</code>, and a private-value length
-     * <code>l</code>.
-     *
-
+     * Parameters not used with ML-KEM. So, this is not really needed but is here just in case.
      *
      * @exception InvalidKeyException
      *                if the key cannot be encoded
      */
-    public MLKEMPublicKey(OpenJCEPlusProvider provider, byte[] rawKeyD , MLKEMParameters params)
+    public MLKEMPublicKey(AlgorithmId algId, OpenJCEPlusProvider provider, byte[] rawKeyE , MLKEMParameters params)
             throws InvalidKeyException {
-        this.provider = provider;
+        this(algId, provider, rawKeyE);
         this.mlkemParams = params;
-        this.key = rawKeyD;
-        this.k = mlkemParams.getK();
-        this.encodedKey = getEncoded();
     }
 
-    public MLEKMPublicKey(OpenJCEPlusProvider provider, OCKMLKEMKey mlkemKey) {
+    public MLEKMPublicKey(AlgorithmId algId, OpenJCEPlusProvider provider, OCKMLKEMKey mlkemKey) {
         try {
             this.provider = provider;
-            convertOCKPublicKeyBytes(mlkemKey.getPublicKeyBytes());
+            this.key = mlkemKey.getPublicKeyBytes());
             this.mlkemKey = mlkemKey;
-            parseKeyBits();
         } catch (Exception exception) {
             throw provider.providerException("Failure in DHPublicKey", exception);
         }
@@ -85,22 +90,11 @@ final class MLKEMPublicKey extends X509Key
     public MLKEMPublicKey(OpenJCEPlusProvider provider, byte[] encoded) throws InvalidKeyException {
         this.provider = provider;
 
-        // decode(encoded);
-
         try {
-
-            // System.out.println ("In DHPublicKey(Provider, byte[] encoded" +
-            // ECUtils.bytesToHex(encoded));
-            convertOCKPublicKeyBytes(encoded);
-
-            buildOCKPublicKeyBytes();
-            // System.out.println ("In DHPublicKey(Provider, byte[] encoded publicKeyBytes"
-            // + ECUtils.bytesToHex(publicKeyBytes));
+            decode(encoded);
 
             this.mlkemKey = mlkemKey.createPublicKey(provider.getOCKContext(),
-                    /* publicKeyBytes */ this.encodedKey);
-
-            // System.err.println("Afte OCK: " + ECUtils.bytesToHex(this.key));
+                    /* publicKeyBytes */ this.key);
 
         } catch (IOException ioex) {
             throw new InvalidKeyException("Invalid key format");
@@ -109,17 +103,12 @@ final class MLKEMPublicKey extends X509Key
         }
     }
 
-    private byte[] convertOCKPublicKeyBytes(byte[] encodedKey) throws IOException {
-        /* TODO not sure what the encodings are to look like
-        /*
-         * DerInputStream in = new DerInputStream(publicKeyBytes); DerValue[] inputValue
-         * = in.getSequence(3); BigInteger tempY = inputValue[0].getInteger();
-         * BigInteger tempP = inputValue[1].getInteger(); BigInteger tempG =
-         * inputValue[2].getInteger();
-         * 
-         * DerValue outputValue = new DerValue(DerValue.tag_Integer,
-         * tempY.toByteArray()); return outputValue.toByteArray();
-         */
+    private byte[] decode(byte[] encodedKey) throws IOException {
+        /* SubjectPublicKeyInfo {PUBLIC-KEY: IOSet} ::= SEQUENCE {
+         *        algorithm        AlgorithmIdentifier {PUBLIC-KEY, {IOSet}},
+         *       subjectPublicKey BIT STRING
+         * }
+         */ 
 
         InputStream inStream = new ByteArrayInputStream(encodedKey);
         try {
@@ -137,48 +126,16 @@ final class MLKEMPublicKey extends X509Key
             }
             DerInputStream derInStream = algid.toDerInputStream();
             derInStream.getOID();
-            if (derInStream.available() == 0) {
-                throw new IOException("Parameters missing");
+            //FIPS 202 indicates that there are no parameters with Alg ID
+            if (derInStream.available() != 0) {
+                throw new IOException("Parameters available. Not to standard.");
             }
-
-            /*
-             * Parse the parameters
-             */
-            DerValue params = derInStream.getDerValue();
-            if (params.getTag() == DerValue.tag_Null) {
-                throw new IOException("Null parameters");
-            }
-            if (params.getTag() != DerValue.tag_Sequence) {
-                throw new IOException("Parameters not a SEQUENCE");
-            }
-            params.getData().reset();
-            BigInteger p = params.getData().getDerValue().getBigInteger();
-            BigInteger g = params.getData().getDerValue().getBigInteger();
-            int l = -1;
-            // Private-value length is OPTIONAL
-            if (params.getData().available() != 0) {
-                l = params.getData().getInteger();
-            }
-            if (params.getData().available() != 0) {
-                throw new IOException("Extra parameter data");
-            }
-
 
             /*
              * Parse the key
              */
 
             this.key = derKeyVal.getData().getBitString();
-
-            //customParseKeyBits();
-            parseKeyBits();
-            if (derKeyVal.getData().available() != 0) {
-                throw new InvalidKeyException("Excess key data");
-            }
-
-            dhParams = new DHParameters(provider);
-            dhParams.engineInit((l == -1) ? new DHParameterSpec(p, g, y.bitLength())
-                    : new DHParameterSpec(p, g, l));
 
             this.encodedKey = (byte[]) encodedKey.clone();
 
@@ -195,60 +152,24 @@ final class MLKEMPublicKey extends X509Key
         }
     }
 
-    private byte[] buildOCKPublicKeyBytes() throws Exception {
-        // TODO
-
-        DerValue[] value = new DerValue[3];
-
-        value[0] = new DerValue(DerValue.tag_Integer, this.y.toByteArray());
-        value[1] = new DerValue(DerValue.tag_Integer, dhParams.getP().toByteArray());
-        value[2] = new DerValue(DerValue.tag_Integer, dhParams.getG().toByteArray());
-
-        DerOutputStream asn1Key = new DerOutputStream();
-        try {
-            asn1Key.putSequence(value);
-        } finally {
-            closeStream(asn1Key);
-        }
-
-        return asn1Key.toByteArray();
-    }
-
-    protected void parseKeyBits() throws InvalidKeyException {
-        //TODO
-        try {
-
-            DerInputStream in = new DerInputStream(this.key);
-            this.y = in.getBigInteger();
-
-        } catch (IOException e) {
-            throw new InvalidKeyException(e.toString());
-        }
-
-    }
-
     /**
-     * Returns the key parameters.
+     * Parameters not used with ML-KEM keys
      *
-     * @return the key parameters
+     * @return null always.
      */
     @Override
     public MLKEMParameterSpec getParams() {
         checkDestroyed();
-        try {
-            return this.mlkemParams.engineGetParameterSpec(MLKEMParameterSpec.class);
-        } catch (InvalidParameterSpecException e) {
-            throw provider.providerException("Failure in DHPublicKey", e);
-        }
+        return null;
     }
 
     /**
-     * Returns the name of the algorithm associated with this key: "DH"
+     * Returns the name of the algorithm associated with this key: "ML-KEM"
      */
     @Override
     public String getAlgorithm() {
         checkDestroyed();
-        return "MLKEM";
+        return "ML-KEM";
     }
 
     /**
@@ -263,70 +184,12 @@ final class MLKEMPublicKey extends X509Key
     @Override
     public byte[] getEncoded() {
         checkDestroyed();
-        //TODO
-        /**
-         * Get the encoding of the key.
-         */
-        DerOutputStream params = null;
-        DerOutputStream algid = null;
-        DerOutputStream tmpDerKey = null;
-        DerOutputStream derKey = null;
-        if (this.encodedKey == null) {
-            try {
-                algid = new DerOutputStream();
 
-                // store oid in algid
-                algid.putOID(ObjectIdentifier.of(DH_data));
-
-                // encode parameters
-                params = new DerOutputStream();
-                params.putInteger(this.dhParams.getP());
-                params.putInteger(this.dhParams.getG());
-                if (this.dhParams.getL() != 0) {
-                    params.putInteger(BigInteger.valueOf(this.dhParams.getL()));
-                }
-                // wrap parameters into SEQUENCE
-                DerValue paramSequence = new DerValue(DerValue.tag_Sequence, params.toByteArray());
-                // store parameter SEQUENCE in algid
-                algid.putDerValue(paramSequence);
-
-                // wrap algid into SEQUENCE, and store it in key encoding
-                tmpDerKey = new DerOutputStream();
-                tmpDerKey.write(DerValue.tag_Sequence, algid);
-
-                // store key data
-                tmpDerKey.putBitString(this.key);
-
-                // wrap algid and key into SEQUENCE
-                derKey = new DerOutputStream();
-                derKey.write(DerValue.tag_Sequence, tmpDerKey);
-                this.encodedKey = derKey.toByteArray();
-            } catch (IOException e) {
-                return null;
-            } finally {
-                closeStream(params);
-                closeStream(algid);
-                closeStream(tmpDerKey);
-                closeStream(derKey);
-
-            }
-        }
         return (byte[]) this.encodedKey.clone();
     }
 
-    /**
-     * Returns the public value, <code>y</code>.
-     *
-     * @return the public value, <code>y</code>
-     */
-    @Override
-    public BigInteger getK() {
-        checkDestroyed();
-        return this.mlkemParams.getK();
-    }
-
-    DHKey getOCKKey() {
-        return this.key; //? TODO
+    OCKMLKEMKey getOCKKey() {
+        return this.mlkemKey; 
     }
 
     /**

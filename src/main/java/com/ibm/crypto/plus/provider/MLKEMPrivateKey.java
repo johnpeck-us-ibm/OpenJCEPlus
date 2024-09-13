@@ -14,29 +14,30 @@ import java.math.BigInteger;
 import java.security.AlgorithmParameters;
 import java.security.InvalidKeyException;
 import java.security.Key;
-import java.security.spec.DSAParameterSpec;
 import java.security.spec.InvalidParameterSpecException;
 import java.util.Arrays;
 import javax.security.auth.DestroyFailedException;
 import javax.security.auth.Destroyable;
-import com.ibm.crypto.plus.provider.ock.MLKEMKey;
+import com.ibm.crypto.plus.provider.ock.OCKMLKEMKey;
 
+import ibm.security.internal.interfaces.MLKEMKey;
 import sun.security.pkcs.PKCS8Key;
 import sun.security.util.DerInputStream;
 import sun.security.util.DerOutputStream;
 import sun.security.util.DerValue;
+import sun.security.x509.AlgorithmId;
 
-/**
+/*
  * An ML-KEM private key for the NIST FIPS 203 Algorithm.
  */
-final class MLKEMPrivateKey extends PKCS8Key 
-    implements ibm.security.internal.interfaces.MLKEMKey, Serializable, Destroyable {
+@SuppressWarnings("restriction")
+final class MLKEMPrivateKey extends PKCS8Key implements Serializable, Destroyable {
 
     private static final long serialVersionUID = -358600541133686399L; //TODO
 
     private OpenJCEPlusProvider provider = null;
-    private byte[] publicKeyBytes = null;
-    MLKEMKey mlkemKey;
+    private byte[] keyE = null;
+    OCKMLKEMKey mlkemKey;
      
 
     private transient boolean destroyed = false;
@@ -45,22 +46,20 @@ final class MLKEMPrivateKey extends PKCS8Key
      * Create a MLKEM private key from the parameters and key data.
      *
      * @param rawkeyE 
-     *            the public key bytes used in encapsulate a secert key
+     *            the public key bytes used in encapsulate a secert key can be null;
      * @param rawkeyD
      *             the private key bytes used to decapsulate a secret key
-     * @param params
-     *            the parameters for the a ML_KEM private key
      */
-    public MLKEMPrivateKey(OpenJCEPlusProvider provider, byte[] rawkeyE, byte[] rawkeyD, MLKEMParamters params) throws InvalidKeyException {
+    public MLKEMPrivateKey(AlgorithmId algId, OpenJCEPlusProvider provider, byte[] rawkeyE, byte[] rawkeyD) throws InvalidKeyException {
 
-        this.algid = new PQCAlgorithmId(params.getOID());
-        this.keyParams = params;
-        this.publicKeyBytes= rawkeyE;
+        this.algid = algid;
+        this.keyE = rawkeyE;
         this.key = rawkeyD;
         this.provider = provider;
         
         try {
-            mlkemKey = MLKEMKey.createPrivateKey(provider.getOCKContext(), this.key);
+            //Currently the ICC expects the raw keys.
+            mlkemKey = OCKMLKEMKeyMLKEMKey.createPrivateKey(provider.getOCKContext(), this.key);
         } catch (Exception exception) {
             InvalidKeyException ike = new InvalidKeyException("Failed to create ML-KEM private key");
             provider.setOCKExceptionCause(ike, exception);
@@ -80,9 +79,8 @@ final class MLKEMPrivateKey extends PKCS8Key
         this.provider = provider;
 
         try {
-            parseKeyBits();
-            byte[] privateKeyBytes = buildOCKPrivateKeyBytes();
-            this.mlkemKey = MLKEMKey.createPrivateKey(provider.getOCKContext(), privateKeyBytes);
+            //Currently the ICC expects the raw keys.
+            this.mlkemKey = OCKMLKEMKey.createPrivateKey(provider.getOCKContext(), this.key);
         } catch (Exception exception) {
             InvalidKeyException ike = new InvalidKeyException("Failed to create DSA private key",
                     exception);
@@ -92,14 +90,13 @@ final class MLKEMPrivateKey extends PKCS8Key
     }
 
     /**
-     * Returns the DSA parameters associated with this key, or null if the
-     * parameters could not be parsed.
+     * Parameters are not used with ML-KEM.
      *
-     * @return DSAParams the DSA parameter of this instance
+     * @return parameters not required for ML-KEM
      */
     @Override
     public MLKEMParameters getParams() {
-        this.keyParams;
+        return null;
     }
 
     @Override
@@ -118,34 +115,6 @@ final class MLKEMPrivateKey extends PKCS8Key
         return this.mlkemKey;
     }
 
-    protected void parseKeyBits() throws IOException {
-        DerInputStream in = new DerInputStream(key);
-        //TODO define this for ML_KEM private key
-        try {
-            x = in.getBigInteger();
-        } catch (IOException e) {
-            throw new IOException("Invalid ML-KEM private key", e);
-        }
-    }
-
-    private byte[] convertOCKPrivateKeyBytes(byte[] privateKeyBytes) throws IOException {
-        //TODO define this for ML_KEM private key
-        DerInputStream in = new DerInputStream(privateKeyBytes);
-        DerValue[] inputValue = in.getSequence(6);
-        /* The first 5 values are there but we do need to use them 
-         * BigInteger tempVersion = inputValue[0].getInteger();
-
-
-        DerValue outputValue = new DerValue(DerValue.tag_Integer, tempX.toByteArray());
-        return outputValue.toByteArray();
-    }
-
-    private byte[] buildOCKPrivateKeyBytes() throws IOException {
-    //TODO define this for ML_KEM private key
-        MLKEMParameters params = getParams();
-
-
-    }
 
     /**
      * Destroys this key. A call to any of its other methods after this will
@@ -162,7 +131,7 @@ final class MLKEMPrivateKey extends PKCS8Key
                 Arrays.fill(this.key, (byte) 0x00);
             }
             this.mlkemKey = null;
-            this.x = null; //TODO define this for ML_KEM private key
+            this.keyE = null;
         }
     }
 
@@ -212,16 +181,4 @@ final class MLKEMPrivateKey extends PKCS8Key
         return false;
     }
 
-    public static boolean equals(MLKEMParameters spec1, MLKEMParameters spec2) {
-        if (spec1 == spec2) {
-            return true;
-        }
-
-        if (spec1 == null || spec2 == null) {
-            return false;
-        }
-
-        return (spec1.getP().equals(spec2.getP()) && spec1.getQ().equals(spec2.getQ())
-                && spec1.getG().equals(spec2.getG())); // TODO
-    }
 }
