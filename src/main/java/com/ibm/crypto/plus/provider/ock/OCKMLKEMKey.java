@@ -105,6 +105,7 @@
          return pkeyId;
      }
  
+     // Not sure we need this.
      public int getKeySize() throws OCKException {
          //final String methodName = "getKeySize";
          if (keySize == 0) {
@@ -175,6 +176,7 @@
          }
      }
  
+     //Not sure we need this since size is in the Alg.
      private synchronized void obtainKeySize() throws OCKException {
          // Leave this duplicate check in here. If two threads are both trying
          // to obtainKeySize at the same time, we only want to call the

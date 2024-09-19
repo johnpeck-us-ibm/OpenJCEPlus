@@ -59,7 +59,7 @@ final class MLKEMPrivateKey extends PKCS8Key implements Serializable, Destroyabl
         
         try {
             //Currently the ICC expects the raw keys.
-            mlkemKey = OCKMLKEMKeyMLKEMKey.createPrivateKey(provider.getOCKContext(), this.key);
+            mlkemKey = OCKMLKEMKey.createPrivateKey(provider.getOCKContext(), this.key);
         } catch (Exception exception) {
             InvalidKeyException ike = new InvalidKeyException("Failed to create ML-KEM private key");
             provider.setOCKExceptionCause(ike, exception);

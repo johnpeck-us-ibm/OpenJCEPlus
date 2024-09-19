@@ -984,4 +984,30 @@ final class NativeInterface {
     static public native void HKDF_delete(long ockContextId, long hkdfId) throws OCKException;
 
     static public native int HKDF_size(long ockContextId, long hkdfId) throws OCKException;
+
+    // =========================================================================
+    // ML-KEM key functions
+    // =========================================================================
+
+    static public native long MLKEMKEY_generate(long ockContextId, int numBits, long e)
+            throws OCKException;
+
+    static public native long MLKEMKEY_createPrivateKey(long ockContextId, byte[] privateKeyBytes)
+            throws OCKException;
+
+    static public native long MLKEMKEY_createPublicKey(long ockContextId, byte[] publicKeyBytes)
+            throws OCKException;
+
+    static public native byte[] MLKEMKEY_getPrivateKeyBytes(long ockContextId, long rsaKeyId)
+            throws OCKException;
+
+    static public native byte[] MLKEMKEY_getPublicKeyBytes(long ockContextId, long rsaKeyId)
+            throws OCKException;
+
+    static public native long MLKEMKEY_createPKey(long ockContextId, long rsaKeyId)
+            throws OCKException;
+
+    static public native int MLKEMKEY_size(long ockContextId, long rsaKeyId);
+
+    static public native void MLKEMKEY_delete(long ockContextId, long rsaKeyId);
 }
