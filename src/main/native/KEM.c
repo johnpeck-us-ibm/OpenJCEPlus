@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2023
+ * Copyright IBM Corp. 2024
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -20,71 +20,121 @@
 //============================================================================
 /*
  * Class:     com_ibm_crypto_plus_provider_ock_NativeInterface
- * Method:    MLKEY_generate
+ * Method:    KEM_encapsulate
  * Signature: (JI)J
  */
-JNIEXPORT jlong JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_MLKEY_1generate
-  (JNIEnv *env, jclass thisObj, jlong ockContextId, jstring cipherName, jlong e)
+JNIEXPORT jlong JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_KEM_1encapsulate
+  (JNIEnv *env, jclass thisObj, jlong ockContextId, jbyteArray publcKeyBytes, jbyteArray wrappedKey, jbyteArray randomKey)
 {
-  static const char * functionName = "NativeInterface.MLKEY_generate";
+  static const char * functionName = "NativeInterface.KEM_encapsulate";
 
   ICC_CTX *         ockCtx = (ICC_CTX *)((intptr_t) ockContextId);
-  ICC_EVP_PKEY_CTX* evp_sp; 
+  ICC_EVP_PKEY_CTX* evp_pk;
+  ICC_EVP_PKEY*     pa = NULL;
   jlong             mlkeyId = 0;
+  jint              wrappedkeylen = 0;
+  jint              pubkeylen = 0;
+  jint              genkeylen = 0;
+  unsigned char *   keyBytesNative = NULL;
+  unsigned char*    wrappedkeylocal = null;
+  unsigned char*    genkeylocal = null;
+  unsigned char *   wrappedkeyNative = NULL;
+  unsigned char *   genkeyNative = NULL;
 
   if( debug ) {
     gslogFunctionEntry(functionName);
   }
 
-  if (ciphername == null) {
-    return 0;
+    keyBytesNative = (unsigned char*)((*env)->GetPrimitiveArrayCritical(env, publcKeyBytes, &isCopy));
+  
+  if( NULL == keyBytesNative ) {
+#ifdef DEBUG_KEM_DETAIL
+    if ( debug ) {
+       gslogMessage ("DETAIL_KEM  FAILURE keyBytesNative");
+    }
+#endif
+    throwOCKException(env, 0, "NULL from GetPrimitiveArrayCritical!");
+  } else {
+    if ( debug ) {
+      gslogMessage ("DETAIL_RSA KeyBytesNative allocated");
+    }
   }
 
-  evp_sp = ICC_EVP_PKEY_CTX_new_from_name(ockCtx, cipherName, NULL);
-      if (!evp_sp) {
-         const int nid = ICC_OBJ_txt2nid(ockCtx, cipherName);
-         if (!nid) {
-            throwOCKException(env, 0, "Key generation failed");
-            return 0;
-         }
+   pubkeylen = (*env)->GetArrayLength(env, publcKeyBytes);
+  
+  // Assume key is a PKCS1 key
+   pa = ICC_d2i_PUBKEY(ockCtx, &pa, &nativeKeyBytes, (long)pubkeylen);
 
-         evp_sp = ICC_EVP_PKEY_CTX_new_id(ockCtx, nid, NULL);
-         if (!evp_sp) {}
-            throwOCKException(env, 0, "Key generation failed");
-            return 0;
-         }
-      }
+   evp_pk = ICC_EVP_PKEY_CTX_new_from_pkey(ockCtx, NULL, pa, NULL);
+   if (!evp_pk) {
+      return 2;
+      //throw ICC_err(ICC_err::err::failed, "KyberEVP::ICC_EVP_PKEY_CTX_new_from_pkey", -1);
+   }
+   //evp_pk = p_pkc.get();
 
-      int rv = ICC_OSSL_SUCCESS;
-      rv = ICC_EVP_PKEY_keygen_init(ockCtx, evp_sp);
-      if (rv != ICC_OSSL_SUCCESS) {
-         if (evp_sp) {
-            ICC_EVP_PKEY_CTX_free(ockCtx, evp_sp);
-         }
-         throwOCKException(env, 0, "Key generation failed");
-         return 0;
-      }
+   int rc = -1;
 
-      ICC_EVP_PKEY* pa = NULL;
+   rc = ICC_EVP_PKEY_encapsulate_init(ockCtx, NULL, NULL);
+   if (rc != ICC_OSSL_SUCCESS) {
+      return 3;
+      //throw ICC_err(ICC_err::err::failed, "KyberEVP::ICC_EVP_PKEY_encapsulate_init", rc);
+   }
 
-      rv = ICC_EVP_PKEY_keygen(ockCtx, evp_sp, &pa);
-      if (rv != ICC_OSSL_SUCCESS) {
-         if (evp_sp) {
-            ICC_EVP_PKEY_CTX_free(ockCtx, evp_sp);
-         }
-         if (pa) {
-            ICC_EVP_PKEY_free(ockCtx, pa);
-         }
-         throwOCKException(env, 0, "Key generation failed");
-         return 0;
-      }
 
+
+   rc = ICC_EVP_PKEY_encapsulate(ockCtx, evp_pk, NULL, &wrappedkeylen, NULL, &genkeylen);
+   if (rc != ICC_OSSL_SUCCESS) {
+      return 4;
+      //throw ICC_err(ICC_err::err::failed, "KyberEVP::ICC_EVP_PKEY_encapsula
       mlkeyId = (jlong)((intptr_t)pa);
   }  
+
+    wrappedkeylocal = (unsigned char *)malloc(wrappedkeylen);
+    genkeylocal = (unsigned char *)malloc(genkeylen);
+    if (wrappedkeylocal == NULL || genkeylocal == NULL) {
+      if (wrappedkeylocal != NULL){
+        free(wrappedkeylocal);
+      }
+      if (genkeylocal != NULL){
+        free(wrappedkeylocal);
+      }
+      throwOCKException(env, 0, "malloc failed");
+    } else {
+        rc = ICC_EVP_PKEY_encapsulate(ockCtx, evp_pk, wrappedkeylocal, &wrappedkeylen, genkeylocal, &genkeylen);
+        if (rc != ICC_OSSL_SUCCESS) {
+           return 5;
+        }
+        wrappedKey = (*env)->NewByteArray(env, wrappedkeylen);
+        if( sigBytes == NULL ) {
+          throwOCKException(env, 0, "NewByteArray failed");
+        } else {
+          wrappedKeyNative = (unsigned char*)((*env)->GetPrimitiveArrayCritical(env, wrappedKey, &isCopy));
+          if( wrappedKeyNative == NULL ) {
+            throwOCKException(env, 0, "NULL from GetPrimitiveArrayCritical");
+          } else {
+            memcpy(wrappedKeyNative, wrappedKeyLocal, wrappedkeylen);
+          }
+        }
+        randomKey = (*env)->NewByteArray(env, genkeylen);
+        if( sigBytes == NULL ) {
+          throwOCKException(env, 0, "NewByteArray failed");
+        } else {
+          genKeyNative = (unsigned char*)((*env)->GetPrimitiveArrayCritical(env, randomKey, &isCopy));
+          if( wrappedKeyNative == NULL ) {
+            throwOCKException(env, 0, "NULL from GetPrimitiveArrayCritical");
+          } else {
+            memcpy(wrappedKeyNative, genkeyLocal, genkeylen);
+          }
+        }
+      }
+    }
+
+
 
   if( debug ) {
     gslogFunctionExit(functionName);
   }
+// Add code to remove PKEY context created above.
 
   return mlkeyId;
 }
@@ -92,16 +142,16 @@ JNIEXPORT jlong JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_ML
 //============================================================================
 /*
  * Class:     com_ibm_crypto_plus_provider_ock_NativeInterface
- * Method:    MLKEY_createPrivateKey
+ * Method:    MLKEY_decapsulate
  * Signature: (J[B)J
  */
 JNIEXPORT jlong JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_MLKEY_1createPrivateKey
-  (JNIEnv *env, jclass thisObj, jlong ockContextId, jstring cipherName, jbyteArray privateKeyBytes)
+  (JNIEnv *env, jclass thisObj, jlong ockContextId, jstring cipherName, jlong privateKey)
 {
-  static const char * functionName = "NativeInterface.MLKEY_createPrivateKey";
+  static const char * functionName = "NativeInterface.KEM_decapsulate";
 
   ICC_CTX *       ockCtx = (ICC_CTX *)((intptr_t) ockContextId);
-  ICC_MLKEY *       ockMLKEY = NULL;
+  ICC_MLKEY *     ockMLKEY = NULL;
   ICC_EVP_PKEY *  ockPKey = NULL;
   unsigned char * keyBytesNative = NULL;
   jboolean        isCopy = 0;
@@ -112,6 +162,42 @@ JNIEXPORT jlong JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_ML
   if( debug ) {
     gslogFunctionEntry(functionName);
   }
+
+ICC_EVP_PKEY_CTX* skc = p_skc->ctx; // private key
+
+   int rc;
+
+   rc = ICC_EVP_PKEY_decapsulate_init(c, NULL, NULL);
+   if (rc != ICC_OSSL_SUCCESS) {
+      return 1;
+   }
+
+   /* peer's public key is just the ss encrypted (by peer) with our public key */
+   size_t wrappedkeylen = 0;
+   wrappedkeylen = p_pks->len;
+   unsigned char* wrappedkey = p_pks->data;
+
+   size_t genkeylen = 0;
+
+   rc = ICC_EVP_PKEY_decapsulate(c, skc, NULL, &genkeylen, NULL, wrappedkeylen);
+   if (rc != ICC_OSSL_SUCCESS) {
+      return 2;
+   }
+
+   kbuf gk;
+   gk.len = genkeylen;
+   gk.data = malloc(genkeylen);
+   unsigned char* genkey = gk.data;
+   //unsigned char* unwrapped, size_t* unwrappedlen, const unsigned char* wrapped, size_t wrappedlen
+   rc = ICC_EVP_PKEY_decapsulate(c, skc, genkey, &genkeylen, wrappedkey, wrappedkeylen);
+   if (rc != ICC_OSSL_SUCCESS) {
+      return 3;
+   }
+
+   *ss = gk;
+
+   return 0;
+
 
   if (privateKeyBytes == NULL) {
     throwOCKException(env, 0, "The ML Key Private Key bytes are incorrect.");
@@ -203,441 +289,4 @@ JNIEXPORT jlong JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_ML
   }
 
   return mlkeyId;
-}
-
-//============================================================================
-/*
- * Class:     com_ibm_crypto_plus_provider_ock_NativeInterface
- * Method:    MLKEY_createPublicKey
- * Signature: (J[B)J
- */
-JNIEXPORT jlong JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_MLKEY_1createPublicKey
-  (JNIEnv *env, jclass thisObj, jlong ockContextId, jstring cipherName, jbyteArray publicKeyBytes)
-{
-  static const char * functionName = "NativeInterface.MLKEY_createPublicKey";
-
-  ICC_CTX *       ockCtx = (ICC_CTX *)((intptr_t) ockContextId);
-  ICC_MLKEY *       ockMLKEY = NULL;
-  ICC_EVP_PKEY *  ockPKey = NULL;
-  unsigned char * keyBytesNative = NULL;
-  jboolean        isCopy = 0;
-  jlong           mlkeyId = 0;
-  unsigned char * pBytes = NULL;
-  jint            size = 0;
-
-  if( debug ) {
-    gslogFunctionEntry(functionName);
-  }
-  if (publicKeyBytes == NULL) {
-    throwOCKException(env, 0, "The MLKEY Key Public bytes are incorrect.");
-	if( debug ) {
-	  gslogFunctionExit(functionName);
-	}
-	return mlkeyId;
-  }
-  keyBytesNative = (unsigned char*)((*env)->GetPrimitiveArrayCritical(env, publicKeyBytes, &isCopy));
-  if( NULL == keyBytesNative ) {
-#ifdef DEBUG_MLKEY_DETAIL
-    if ( debug ) {
-      gslogMessage ("DETAIL_MLKEY  FAILURE keyBytesNative");
-    }
-#endif
-    throwOCKException(env, 0, "NULL from GetPrimitiveArrayCritical!");
-  } else {
-
-#ifdef DEBUG_MLKEY_DETAIL
-    if ( debug ) {
-      gslogMessage ("DETAIL_MLKEY KeyBytesNative allocated");
-    }
-#endif
-    pBytes = (unsigned char *)keyBytesNative;
-    size = (*env)->GetArrayLength(env, publicKeyBytes);
-#ifdef DEBUG_MLKEY_DATA
-    if ( debug ) {
-      gslogMessagePrefix ("DATA_MLKEY PublicKeyBytes : ");
-      gslogMessageHex ((char *) pBytes, 0, (int) size, 0, 0, NULL);
-    }
-#endif
-
-    ockPKey = ICC_EVP_PKEY_new(ockCtx);
-    if( NULL == ockPKey ) {
-      ockCheckStatus(ockCtx);
-#ifdef DEBUG_MLKEY_DETAIL
-    if ( debug ) {
-      gslogMessage ("DETAIL_MLKEY  FAILURE ICC_EVP_PKEY_new");
-    }
-#endif
-      throwOCKException(env, 0, "ICC_EVP_PKEY_new failed");
-    } else {
-      ICC_EVP_PKEY * ret = ICC_d2i_PublicKey(ockCtx, cipherName, &ockPKey, &pBytes, (int)size);
-#ifdef DEBUG_MLKEY_DETAIL
-          if ( debug ) {
-            gslogMessage ("DETAIL_MLKEY ICC_EVP_PKEY  %x", ret);
-          }
-#endif
-      if( ret == NULL ) {
-#ifdef DEBUG_MLKEY_DETAIL
-        if ( debug ) {
-          gslogMessage ("DETAIL_MLKEY  FAILURE ICC_d2i_PublicKey");
-        }
-#endif
-        ockCheckStatus(ockCtx);
-        throwOCKException(env, 0, "ICC_d2i_PublicKey failed");
-      } else {
-        ockMLKEY = ICC_EVP_PKEY_new_from_pkey(ockCtx, ockPKey, NULL);
-        if( ockMLKEY == NULL ) {
-#ifdef DEBUG_MLKEY_DETAIL
-          if ( debug ) {
-            gslogMessage ("DETAIL_MLKEY  FAILURE ICC_EVP_PKEY_new_from_pkey");
-          }
-#endif
-          ockCheckStatus(ockCtx);
-          throwOCKException(env, 0, "ICC_EVP_PKEY_new_from_pkey failed");
-        } else {
-          mlkeyId = (jlong)((intptr_t)ockMLKEY);
-#ifdef DEBUG_MLKEY_DETAIL
-          if ( debug ) {
-            gslogMessage ("DETAIL_MLKEY mlkeyId  %lx", (long) mlkeyId);
-          }
-#endif
-        }
-      }
-    }
-  }
-
-  if( keyBytesNative != NULL ) {
-    (*env)->ReleasePrimitiveArrayCritical(env, publicKeyBytes, keyBytesNative, 0);
-  }
-
-  if( ockPKey != NULL ) {
-    ICC_EVP_PKEY_free(ockCtx, ockPKey);
-    ockPKey = NULL;
-  }
-
-  if( debug ) {
-    gslogFunctionExit(functionName);
-  }
-
-  return mlkeyId;
-}
-
-//============================================================================
-/*
- * Class:     com_ibm_crypto_plus_provider_ock_NativeInterface
- * Method:    MLKEY_getPrivateKeyBytes
- * Signature: (JJ)[B
- */
-JNIEXPORT jbyteArray JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_MLKEY_1getPrivateKeyBytes
-  (JNIEnv * env, jclass thisObj, jlong ockContextId, jlong mlkeyId)
-{
-  static const char * functionName = "NativeInterface.MLKEY_getPrivateKeyBytes";
-
-  ICC_CTX *       ockCtx = (ICC_CTX *)((intptr_t) ockContextId);
-  ICC_EVP_PKEY*   ockKey = (ICC_EVP_PKEY*)((intptr_t) mlkeyId);
-  jbyteArray      keyBytes = NULL;
-  unsigned char * keyBytesNative = NULL;
-  jboolean        isCopy = 0;
-  int             size;
-  jbyteArray      retKeyBytes = NULL;
-
-  if( debug ) {
-    gslogFunctionEntry(functionName);
-  }
-
-  if (ockMLKEY == NULL) {
-    throwOCKException(env, 0, "The Key identifier is incorrect.");
-	if( debug ) {
-	  gslogFunctionExit(functionName);
-	}
-	return retKeyBytes;
-  }
-
-#ifdef DEBUG_MLKEY_DETAIL
-   if ( debug ) {
-     gslogMessage ("DETAIL_MLKEY mlkeyId  %lx", (long) mlkeyId);
-   }
-#endif
-  size = ICC_i2d_PrivateKey(ockCtx, ockMLKEY, NULL);
-  if( size <= 0 ) {
-#ifdef DEBUG_MLKEY_DETAIL
-    if ( debug ) {
-      gslogMessage ("DETAIL_MLKEY  FAILURE ICC_i2d_PrivateKey");
-    }
-#endif
-    ockCheckStatus(ockCtx);
-    throwOCKException(env, 0, "ICC_i2d_PrivateKey failed");
-  } else {
-    keyBytes = (*env)->NewByteArray(env, size);
-    if( keyBytes == NULL ) {
-#ifdef DEBUG_MLKEY_DETAIL
-      if ( debug ) {
-        gslogMessage ("DETAIL_MLKEY  FAILURE keyBytes");
-      }
-#endif
-      throwOCKException(env, 0, "NewByteArray failed");
-    } else {
-      keyBytesNative = (unsigned char*)((*env)->GetPrimitiveArrayCritical(env, keyBytes, &isCopy));
-      if( keyBytesNative == NULL ) {
-#ifdef DEBUG_MLKEY_DETAIL
-        if ( debug ) {
-          gslogMessage ("DETAIL  FAILURE keyBytesNative ");
-        }
-#endif
-        throwOCKException(env, 0, "NULL from GetPrimitiveArrayCritical");
-      } else {
-        unsigned char * pBytes = (unsigned char *)keyBytesNative;
-
-        size = ICC_i2d_PrivateKey(ockCtx, ockMLKEY, &pBytes);
-        if( size <= 0 ) {
-          ockCheckStatus(ockCtx);
-#ifdef DEBUG_MLKEY_DETAIL
-        if ( debug ) {
-          gslogMessage ("DETAIL  FAILURE ICC_i2d_PrivateKey");
-        }
-#endif
-          throwOCKException(env, 0, "ICC_i2d_PrivateKey failed");
-        } else {
-          retKeyBytes = keyBytes;
-#ifdef DEBUG_MLKEY_DATA
-          if ( debug ) {
-            gslogMessagePrefix ("DATA private KeyBytes : ");
-            gslogMessageHex ((char *) pBytes, 0, (int) size, 0, 0, NULL);
-          }
-#endif
-        }
-      }
-    }
-  }
-
-  if( keyBytesNative != NULL ) {
-    (*env)->ReleasePrimitiveArrayCritical(env, keyBytes, keyBytesNative, 0);
-  }
-
-  if( (keyBytes != NULL) && (retKeyBytes == NULL) ) {
-    (*env)->DeleteLocalRef(env, keyBytes);
-  }
-
-  if( debug ) {
-    gslogFunctionExit(functionName);
-  }
-
-  return retKeyBytes;
-}
-
-//============================================================================
-/*
- * Class:     com_ibm_crypto_plus_provider_ock_NativeInterface
- * Method:    MLKEY_getPublicKeyBytes
- * Signature: (JJ)[B
- */
-JNIEXPORT jbyteArray JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_MLKEY_1getPublicKeyBytes
-  (JNIEnv *env, jclass thisObj, jlong ockContextId, jlong mlkeyId )
-{
-  static const char * functionName = "NativeInterface.MLKEY_getPublicKeyBytes";
-
-  ICC_CTX *       ockCtx = (ICC_CTX *)((intptr_t) ockContextId);
-  ICC_EVP_PKEY*   ockKey = (ICC_EVP_PKEY*)((intptr_t) mlkeyId);
-  jbyteArray      keyBytes = NULL;
-  unsigned char * keyBytesNative = NULL;
-  jboolean        isCopy = 0;
-  size_t          size = 0;
-  jbyteArray      retKeyBytes = NULL;
-
-  if( debug ) {
-    gslogFunctionEntry(functionName);
-  }
-
-  if (ockKey == NULL) {
-    throwOCKException(env, 0, "The Key identifier is incorrect.");
-  	if( debug ) {
-  	  gslogFunctionExit(functionName);
-  	}
-  	return retKeyBytes;
-  }
-
-size_t bits = 0;
-bits = ICC_EVP_PKEY_size(ctx, ockKey); //Use this instead of the below??
-
-  size = ICC_i2d_PublicKey(ockCtx, ockKey, NULL);
-#ifdef DEBUG_MLKEY_DETAIL
-  if ( debug ) {
-      gslogMessage ("DETAIL_Key mlkeyId %lx size %d ", (long) mlkeyId, (int) size);
-  }
-#endif
-  if( size <= 0 ) {
-#ifdef DEBUG_MLKEY_DETAIL
-    if ( debug ) {
-      gslogMessage ("DETAIL_Key  FAILURE ICC_i2d_PublicKey");
-    }
-#endif
-    ockCheckStatus(ockCtx);
-    throwOCKException(env, 0, "ICC_i2d_PublicKey failed");
-  } else {
-    keyBytes = (*env)->NewByteArray(env, size);
-    if( keyBytes == NULL ) {
-#ifdef DEBUG_MLKEY_DETAIL
-    if ( debug ) {
-      gslogMessage ("DETAIL_MLKEY  FAILURE keyBytes ");
-    }
-#endif
-      throwOCKException(env, 0, "NewByteArray failed");
-    } else {
-      keyBytesNative = (unsigned char*)((*env)->GetPrimitiveArrayCritical(env, keyBytes, &isCopy));
-      if( keyBytesNative == NULL ) {
-#ifdef DEBUG_MLKEY_DETAIL
-        if ( debug ) {
-          gslogMessage ("DETAIL_MLKEY  FAILURE keyBytesNative ");
-        }
-#endif
-        throwOCKException(env, 0, "NULL from GetPrimitiveArrayCritical");
-      } else {
-        unsigned char * pBytes = (unsigned char *)keyBytesNative;
-
-        size = ICC_i2d_PublicKey(ockCtx, ockKey, &pBytes);
-        if( size <= 0 ) {
-          ockCheckStatus(ockCtx);
-#ifdef DEBUG_MLKEY_DETAIL
-          if ( debug ) {
-            gslogMessage ("DETAIL_MLKEY  FAILURE ICC_i2d_PublicKey");
-          }
-#endif
-          throwOCKException(env, 0, "ICC_i2d_PublicKey failed");
-        } else {
-          retKeyBytes = keyBytes;
-#ifdef DEBUG_MLKEY_DATA
-    if ( debug ) {
-      gslogMessagePrefix ("DATA_MLKEY KeyBytes : ");
-      gslogMessageHex ((char *) pBytes, 0, (int) size, 0, 0, NULL);
-    }
-#endif
-        }
-      }
-    }
-  }
-
-  if( keyBytesNative != NULL ) {
-    (*env)->ReleasePrimitiveArrayCritical(env, keyBytes, keyBytesNative, 0);
-  }
-
-  if( (keyBytes != NULL) && (retKeyBytes == NULL) ) {
-    (*env)->DeleteLocalRef(env, keyBytes);
-  }
-
-  if( debug ) {
-    gslogFunctionExit(functionName);
-  }
-
-  return keyBytes;
-}
-
-//============================================================================
-/*  NOTE: NOT SURE THIS IS NEEDED.
- * Class:     com_ibm_crypto_plus_provider_ock_NativeInterface
- * Method:    MLKEY_createPKey
- * Signature: (JJ)J
- */
-JNIEXPORT jlong JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_MLKEY_1createPKey
-  (JNIEnv * env, jclass thisObj, jlong ockContextId, jlong mlkeyId)
-{
-  static const char * functionName = "NativeInterface.MLKEY_createPKey";
-
-  ICC_CTX *      ockCtx = (ICC_CTX *)((intptr_t) ockContextId);
-  ICC_EVP_PKEY*  ockKeys = (ICC_EVP_PKEY *)((intptr_t) mlkeyId);
-  ICC_EVP_PKEY * ockPKey = NULL;
-  jlong          pkeyId = 0;
-
-  if( debug ) {
-    gslogFunctionEntry(functionName);
-  }
-
-  if (ockMLKEY == NULL) {
-    throwOCKException(env, 0, "The Key identifier is incorrect.");
-  	if( debug ) {
-  	  gslogFunctionExit(functionName);
-  	}
-  	return pkeyId;
-  }
-#ifdef DEBUG_MLKEY_DETAIL
-  if ( debug ) {
-    gslogMessage ("DETAIL_MLKEY mlkeyId %lx ", (long) mlkeyId);
-  }
-#endif
-
-  ockPKey = ICC_EVP_PKEY_new(ockCtx);
-  if( ockPKey == NULL ) {
-#ifdef DEBUG_MLKEY_DETAIL
-    if ( debug ) {
-      gslogMessage ("DETAIL_MLKEY  FAILURE ICC_EVP_PKEY_new");
-    }
-#endif
-    ockCheckStatus(ockCtx);
-    throwOCKException(env, 0, "ICC_EVP_PKEY_new failed");
-  } else {
-    int rc = ICC_EVP_PKEY_set1_MLKEY(ockCtx, ockPKey, ockMLKEY);
-#ifdef DEBUG_MLKEY_DETAIL
-    if ( debug ) {
-      gslogMessage ("DETAIL_MLKEY rc from ICC_EVP_PKEY_set1_MLKEY %d ", rc);
-    }
-#endif
-    if( rc != ICC_OSSL_SUCCESS ) {
-      ockCheckStatus(ockCtx);
-#ifdef DEBUG_MLKEY_DETAIL
-    if ( debug ) {
-      gslogMessage ("DETAIL_MLKEY  FAILURE ICC_EVP_PKEY_set1_MLKEY %d", rc);
-    }
-#endif
-      throwOCKException(env, 0, "ICC_EVP_PKEY_set1_MLKEY failed");
-    } else {
-      pkeyId = (jlong)((intptr_t)ockPKey);
-#ifdef DEBUG_MLKEY_DETAIL
-    if ( debug ) {
-      gslogMessage ("DETAIL_MLKEY pkeyId %lx=", pkeyId);
-    }
-#endif
-    }
-  }
-
-  if( (ockPKey != NULL) && (pkeyId == 0) ) {
-    ICC_EVP_PKEY_free(ockCtx, ockPKey);
-    ockPKey = NULL;
-  }
-
-  if( debug ) {
-    gslogFunctionExit(functionName);
-  }
-
-  return pkeyId;
-}
-
-
-//============================================================================
-/* NOTE: NOt SURE WE NEED THIS.
- * Class:     com_ibm_crypto_plus_provider_ock_NativeInterface
- * Method:    MLKEY_delete
- * Signature: (JJ)V
- */
-JNIEXPORT void JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_MLKEY_1delete
-  (JNIEnv *env, jclass thisObj, jlong ockContextId, jlong mlkeyId)
-{
-  static const char * functionName = "NativeInterface.MLKEY_delete";
-
-  ICC_CTX * ockCtx = (ICC_CTX *)((intptr_t) ockContextId);
-  ICC_MLKEY * ockKey = (ICC_MLKEY *)((intptr_t) mlkeyId);
-
-  if( debug ) {
-    gslogFunctionEntry(functionName);
-  }
-#ifdef DEBUG_MLKEY_DETAIL
-  if ( debug ) {
-    gslogMessage("DETAIL_MLKEY mlkeyId=%lx", (long) mlkeyId);
-  }
-#endif
-  if (ockKey != NULL) {
-	  ICC_PKEY_free(ockCtx, ockKey);
-	  ockKey = NULL;
-  }
-
-  if( debug ) {
-    gslogFunctionExit(functionName);
-  }
 }
