@@ -23,7 +23,7 @@
  * Method:    KEM_encapsulate
  * Signature: (JI)J
  */
-JNIEXPORT jlong JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_KEM_1encapsulate
+JNIEXPORT void JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_KEM_1encapsulate
   (JNIEnv *env, jclass thisObj, jlong ockContextId, jbyteArray publcKeyBytes, jbyteArray wrappedKey, jbyteArray randomKey)
 {
   static const char * functionName = "NativeInterface.KEM_encapsulate";
@@ -128,15 +128,14 @@ JNIEXPORT jlong JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_KE
         }
       }
     }
-
-
+  ICC_EVP_PKEY_free(ctx, pa);
 
   if( debug ) {
     gslogFunctionExit(functionName);
   }
 // Add code to remove PKEY context created above.
 
-  return mlkeyId;
+  return;
 }
 
 //============================================================================
@@ -145,148 +144,102 @@ JNIEXPORT jlong JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_KE
  * Method:    MLKEY_decapsulate
  * Signature: (J[B)J
  */
-JNIEXPORT jlong JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_MLKEY_1createPrivateKey
-  (JNIEnv *env, jclass thisObj, jlong ockContextId, jstring cipherName, jlong privateKey)
+JNIEXPORT jlong JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_KEM_1decapsulate
+  (JNIEnv *env, jclass thisObj, jlong ockContextId, jstring cipherName, jbyteArray privateKeyBytes, jbyteArray wrappedKey, jbyteArray randomKey)
 {
   static const char * functionName = "NativeInterface.KEM_decapsulate";
 
-  ICC_CTX *       ockCtx = (ICC_CTX *)((intptr_t) ockContextId);
-  ICC_MLKEY *     ockMLKEY = NULL;
-  ICC_EVP_PKEY *  ockPKey = NULL;
-  unsigned char * keyBytesNative = NULL;
-  jboolean        isCopy = 0;
-  jlong           mlkeyId = 0;
-  unsigned char * pBytes = NULL;
-  jint            size = 0;
+  ICC_CTX *                ockCtx = (ICC_CTX *)((intptr_t) ockContextId);
+  ICC_EVP_PKEY_CTX*        evp_pk;
+  ICC_EVP_PKEY*            priv = NULL;
+  ICC_PKCS8_PRIV_KEY_INFO* p8 = NULL;
+  jint                     wrappedkeylen = 0;
+  jint                     privkeylen = 0;
+  jint                     genkeylen = 0;
+  unsigned char *          keyBytesNative = NULL;
+  unsigned char *          genkeylocal = null;
+  unsigned char *          genkeyNative = NULL;
 
   if( debug ) {
     gslogFunctionEntry(functionName);
   }
 
-ICC_EVP_PKEY_CTX* skc = p_skc->ctx; // private key
-
-   int rc;
-
-   rc = ICC_EVP_PKEY_decapsulate_init(c, NULL, NULL);
-   if (rc != ICC_OSSL_SUCCESS) {
-      return 1;
-   }
-
-   /* peer's public key is just the ss encrypted (by peer) with our public key */
-   size_t wrappedkeylen = 0;
-   wrappedkeylen = p_pks->len;
-   unsigned char* wrappedkey = p_pks->data;
-
-   size_t genkeylen = 0;
-
-   rc = ICC_EVP_PKEY_decapsulate(c, skc, NULL, &genkeylen, NULL, wrappedkeylen);
-   if (rc != ICC_OSSL_SUCCESS) {
-      return 2;
-   }
-
-   kbuf gk;
-   gk.len = genkeylen;
-   gk.data = malloc(genkeylen);
-   unsigned char* genkey = gk.data;
-   //unsigned char* unwrapped, size_t* unwrappedlen, const unsigned char* wrapped, size_t wrappedlen
-   rc = ICC_EVP_PKEY_decapsulate(c, skc, genkey, &genkeylen, wrappedkey, wrappedkeylen);
-   if (rc != ICC_OSSL_SUCCESS) {
-      return 3;
-   }
-
-   *ss = gk;
-
-   return 0;
-
-
-  if (privateKeyBytes == NULL) {
-    throwOCKException(env, 0, "The ML Key Private Key bytes are incorrect.");
-	if( debug ) {
-	  gslogFunctionExit(functionName);
-	}
-	return mlkeyId;
-  }
-  keyBytesNative = (unsigned char*)((*env)->GetPrimitiveArrayCritical(env, privateKeyBytes, &isCopy));
+    keyBytesNative = (unsigned char*)((*env)->GetPrimitiveArrayCritical(env, privateKeyBytes, &isCopy));
+  
   if( NULL == keyBytesNative ) {
-#ifdef DEBUG_MLKEY_DETAIL
+#ifdef DEBUG_KEM_DETAIL
     if ( debug ) {
-       gslogMessage ("DETAIL_MLKEY  FAILURE keyBytesNative");
+       gslogMessage ("DETAIL_KEM  FAILURE keyBytesNative");
     }
 #endif
     throwOCKException(env, 0, "NULL from GetPrimitiveArrayCritical!");
   } else {
     if ( debug ) {
-      gslogMessage ("DETAIL_MLKEY KeyBytesNative allocated");
+      gslogMessage ("DETAIL_RSA KeyBytesNative allocated");
     }
-//  unsigned char * pBytes = (unsigned char *)keyBytesNative;
-    pBytes = (unsigned char *)keyBytesNative;
-//  jint size = (*env)->GetArrayLength(env, privateKeyBytes);
-    size = (*env)->GetArrayLength(env, privateKeyBytes);
-#ifdef DEBUG_MLKEY_DATA
-    if ( debug ) {
-      gslogMessagePrefix ("DATA_MLKEY Private KeyBytes : ");
-      gslogMessageHex ((char *) pBytes, 0, (int) size, 0, 0, NULL);
-    }
-#endif
+  }
 
-    ockPKey = ICC_EVP_PKEY_new(ockCtx);
-    if( NULL == ockPKey ) {
-      ockCheckStatus(ockCtx);
-#ifdef DEBUG_MLKEY_DETAIL
-    if ( debug ) {
-       gslogMessage ("DETAIL_MLKEY  FAILURE ICC_EVP_PKEY_new ");
-    }
-#endif
-      throwOCKException(env, 0, "ICC_EVP_PKEY_new failed");
+   privkeylen = (*env)->GetArrayLength(env, privateKeyBytes);
+  
+  // Assume key is a PKCS8 key
+	p8 = ICC_d2i_PKCS8_PRIV_KEY_INFO(ctx, NULL, &keyBytesNative, (long)privkeylen);
+
+	if (!p8) {
+	  return 11;
+	}
+	priv = ICC_EVP_PKCS82PKEY(ctx, p8);
+	ICC_PKCS8_PRIV_KEY_INFO_free(ctx, p8);
+
+  evp_pk = ICC_EVP_PKEY_CTX_new_from_pkey(ockCtx, NULL, priv, NULL);
+  if (!evp_pk) {
+     return 2;
+     //throw ICC_err(ICC_err::err::failed, "KyberEVP::ICC_EVP_PKEY_CTX_new_from_pkey", -1);
+  }
+
+  int rc = -1;
+
+  rc = ICC_EVP_PKEY_decapsulate_init(ockCtx, NULL, NULL);
+  if (rc != ICC_OSSL_SUCCESS) {
+     return 3;
+     //throw ICC_err(ICC_err::err::failed, "KyberEVP::ICC_EVP_PKEY_encapsulate_init", rc);
+  }
+
+  wrappedkeylen = (*env)->GetArrayLength(env, wrappedKey);
+
+  rc = ICC_EVP_PKEY_deccapsulate(ockCtx, evp_pk, NULL, &genkeylen, NULL, wrappedkeylen);
+  if (rc != ICC_OSSL_SUCCESS) {
+      return 4;
+      //throw ICC_err(ICC_err::err::failed, "KyberEVP::ICC_EVP_PKEY_decapsulate", -1;
+      mlkeyId = (jlong)((intptr_t)pa);
+  }  
+
+    genkeylocal = (unsigned char *)malloc(genkeylen);
+    if (genkeylocal == NULL) {
+      throwOCKException(env, 0, "malloc failed");
     } else {
-      ICC_EVP_PKEY * ret = ICC_d2i_PrivateKey(ockCtx, cipherName, &ockPKey, &pBytes, (long)size);
-#ifdef DEBUG_MLKEY_DETAIL
-    if ( debug ) {
-      gslogMessage ("DETAIL_MLKEY pointer to ICC_EVP_PKEY %x", ret);
-    }
-#endif
-      if( ret == NULL ) {
-        ockCheckStatus(ockCtx);
-#ifdef DEBUG_MLKEY_DETAIL
-        if ( debug ) {
-          gslogMessage ("DETAIL_MLKEY  FAILURE ICC_d2i_PrivateKey");
+        rc = ICC_EVP_PKEY_decapsulate(ockCtx, evp_pk, genkeylocal, &genkeylen, wrappedKey, wrappedkeylen);
+        if (rc != ICC_OSSL_SUCCESS) {
+           return 5;
         }
-#endif
-        throwOCKException(env, 0, "ICC_d2i_PrivateKey failed");
-      } else {
-        ockKey = ICC_EVP_PKEY_new_from_pkey(ockCtx, ockPKey, NULL);
-        if( ockKey == NULL ) {
-#ifdef DEBUG_MLKEY_DETAIL
-          if ( debug ) {
-            gslogMessage ("DETAIL_MLKEY  FAILURE ICC_EVP_PKEY_new_from_pkey");
-          }
-#endif
-          ockCheckStatus(ockCtx);
-          throwOCKException(env, 0, "ICC_EVP_PKEY_new_from_pkey failed");
+        randomKey = (*env)->NewByteArray(env, genkeylen);
+        if( sigBytes == NULL ) {
+          throwOCKException(env, 0, "NewByteArray failed");
         } else {
-          mlkeyId = (jlong)((intptr_t)ockKey);
-#ifdef DEBUG_MLKEY_DETAIL
-          if ( debug ) {
-            gslogMessage ("DETAIL_MLKEY  mlkeyId %lx", mlkeyId);
+          genKeyNative = (unsigned char*)((*env)->GetPrimitiveArrayCritical(env, randomKey, &isCopy));
+          if( wrappedKeyNative == NULL ) {
+            throwOCKException(env, 0, "NULL from GetPrimitiveArrayCritical");
+          } else {
+            memcpy(wrappedKeyNative, genkeyLocal, genkeylen);
           }
-#endif
         }
       }
     }
-  }
-
-  if( keyBytesNative != NULL ) {
-    (*env)->ReleasePrimitiveArrayCritical(env, privateKeyBytes, keyBytesNative, 0);
-  }
-
-  if( ockPKey != NULL ) {
-    ICC_EVP_PKEY_free(ockCtx, ockPKey);
-    ockPKey = NULL;
-  }
+  ICC_EVP_PKEY_free(ctx, priv);
 
   if( debug ) {
     gslogFunctionExit(functionName);
   }
+// Add code to remove PKEY context created above?
 
-  return mlkeyId;
+  return;
 }
