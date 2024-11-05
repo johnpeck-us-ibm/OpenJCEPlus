@@ -25,12 +25,11 @@
  * Signature: (JJJ)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_SIGNATURE_1sign
-  (JNIEnv *env, jclass thisObj, jlong ockContextId, jlong iccMDId, jlong ockPKeyId, jbyteArray data) {
+  (JNIEnv *env, jclass thisObj, jlong ockContextId, jlong ockPKeyId, jbyteArray data) {
 
   static const char * functionName = "NativeInterface.SIGNATURE_sign";
 
   ICC_CTX *          ockCtx = (ICC_CTX *) ((intptr_t) ockContextId);
-  OCKDigest *        ockDigest = (OCKDigest *) ((intptr_t) iccMDId);
   ICC_EVP_PKEY *     ockPKey = (ICC_EVP_PKEY *) ((intptr_t) ockPKeyId);
   ICC_EVP_PKEY_CTX * skc = NULL;
   unsigned char *    sigBytesLocal = NULL;
@@ -56,7 +55,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterfa
     return retSigBytes;
   }
 
-#ifdef DEBUG_SIGNATURE_DETAIL
+#ifdef DEBUG_PQCSIGNATURE_DETAIL
   if ( debug ) {
     gslogMessage ("DETAIL_SIGNATURE ockPKeyId %lx, iccMDId %lx", ockPKeyId, iccMDId);
   }
@@ -72,7 +71,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterfa
 
   rc = ICC_EVP_PKEY_sign_init(ockCtx, skc);
   if( ICC_OSSL_SUCCESS != rc ) {
-#ifdef DEBUG_SIGNATURE_DETAIL
+#ifdef DEBUG_PQCSIGNATURE_DETAIL
     if ( debug ) {
       gslogMessage ("DETAIL_SIGNATURE FAILURE ICC_EVP_PKEY_sign_init rc %d", rc); 
     }
@@ -98,7 +97,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterfa
 
   rc = ICC_EVP_PKEY_sign(ctx, skc, NULL, &sigLen, data, datalen);
   if( ICC_OSSL_SUCCESS != rc ) {
-#ifdef DEBUG_SIGNATURE_DETAIL
+#ifdef DEBUG_PQCSIGNATURE_DETAIL
     if ( debug ) {
       gslogMessage ("DETAIL_SIGNATURE FAILURE ICC_EVP_PKEY_sign rc %d", rc); 
     }
@@ -111,14 +110,14 @@ JNIEXPORT jbyteArray JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterfa
     return retSigBytes;
   }
 
-#ifdef DEBUG_SIGNATURE_DETAIL
+#ifdef DEBUG_PQCSIGNATURE_DETAIL
   if ( debug ) {
     gslogMessage ("DETAIL_SIGNATURE sigLen %d", (int) sigLen); 
   }
 #endif
 
   if( sigLen <= 0 ) {
-#ifdef DEBUG_SIGNATURE_DETAIL
+#ifdef DEBUG_PQCSIGNATURE_DETAIL
     if ( debug ) {
       gslogMessage ("DETAIL_SIGNATURE FAILURE ICC_EVP_PKEY_size"); 
     }
@@ -128,21 +127,21 @@ JNIEXPORT jbyteArray JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterfa
   } else {
     sigBytesLocal = (unsigned char *)malloc(sigLen);
     if( sigBytesLocal == NULL ) {
-#ifdef DEBUG_SIGNATURE_DETAIL
+#ifdef DEBUG_PQCSIGNATURE_DETAIL
     if ( debug ) {
       gslogMessage ("DETAIL_SIGNATURE FAILURE sigBytesLocal "); 
     }
 #endif
       throwOCKException(env, 0, "malloc failed");
     } else {
-#ifdef DEBUG_SIGNATURE_DETAIL
+#ifdef DEBUG_PQCSIGNATURE_DETAIL
       if ( debug ) {
         gslogMessage ("DETAIL_SIGNATURE sigBytes allocated"); 
       }
 #endif
       dataNative = (unsigned char*)((*env)->GetPrimitiveArrayCritical(env, data,  &isCopy));
       if( NULL == dataNative) {
-#ifdef DEBUG_DIGEST_DETAIL 
+#ifdef DEBUG_PQCSIGNATURE_DETAIL 
         if ( debug ) {
           gslogMessage ("Sign failed failed");
         }
@@ -151,7 +150,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterfa
       } else {
         rc = ICC_EVP_PKEY_sign(ockCtx, skc, sigBytesLocal, &sigLen, msg, msgLen);
         if( ICC_OSSL_SUCCESS != rc ) {
-#ifdef DEBUG_SIGNATURE_DETAIL
+#ifdef DEBUG_PQCSIGNATURE_DETAIL
           if ( debug ) {
             gslogMessage ("DETAIL_SIGNATURE FAILURE ICC_EVP_SignFinal rc %d", rc); 
           }
@@ -159,13 +158,13 @@ JNIEXPORT jbyteArray JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterfa
           ockCheckStatus(ockCtx);
           throwOCKException(env, 0, "ICC_EVP_SignFinal failed");
         } else {
-#ifdef DEBUG_SIGNATURE_DETAIL
+#ifdef DEBUG_PQCSIGNATURE_DETAIL
           gslogMessagePrefix("DETAIL_SIGNATURE - %d bytes\n", outLen);
           gslogMessageHex((char *)sigBytesLocal, 0, outLen, 0, 0, NULL);
 #endif
           sigBytes = (*env)->NewByteArray(env, outLen);
           if( sigBytes == NULL ) {
-#ifdef DEBUG_SIGNATURE_DETAIL
+#ifdef DEBUG_PQCSIGNATURE_DETAIL
             if ( debug ) {
               gslogMessage ("DETAIL_SIGNATURE FAILURE sigBytes "); 
             }
@@ -174,7 +173,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterfa
           } else {
             sigBytesNative = (unsigned char*)((*env)->GetPrimitiveArrayCritical(env, sigBytes, &isCopy));
             if( sigBytesNative == NULL ) {
-#ifdef DEBUG_SIGNATURE_DETAIL
+#ifdef DEBUG_PQCSIGNATURE_DETAIL
               if ( debug ) {
                 gslogMessage ("DETAIL_SIGNATURE FAILURE sigBytesNative "); 
               }
@@ -221,18 +220,21 @@ JNIEXPORT jbyteArray JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterfa
  * Signature: (JJJ)Z
  */
 JNIEXPORT jboolean JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_SIGNATURE_1verify
-  (JNIEnv *env, jclass thisObj, jlong ockContextId, jlong iccMDId, jlong ockPKeyId, jbyteArray sigBytes) {
+  (JNIEnv *env, jclass thisObj, jlong ockContextId, jlong ockPKeyId, jbyteArray sigBytes, jbyteArray data) {
 
   static const char * functionName = "NativeInterface.SIGNATURE_verify";
 
-  ICC_CTX *      ockCtx = (ICC_CTX *) ((intptr_t) ockContextId);
-  OCKDigest *    ockDigest = (OCKDigest *) ((intptr_t) iccMDId);
-  ICC_EVP_PKEY * ockPKey = (ICC_EVP_PKEY *) ((intptr_t) ockPKeyId);
-  unsigned char *         sigBytesNative = NULL;
-  jboolean       isCopy = 0;
-  int            rc = ICC_OSSL_SUCCESS;
-  jboolean       verified = 0;
-  unsigned long  errCode;
+  ICC_CTX *          ockCtx = (ICC_CTX *) ((intptr_t) ockContextId);
+  ICC_EVP_PKEY *     ockPKey = (ICC_EVP_PKEY *) ((intptr_t) ockPKeyId);
+  ICC_EVP_PKEY_CTX * evp_pk = NULL;
+  unsigned char *    sigBytesNative = NULL;
+  unsigned char *    dataNative = NULL;
+  jboolean           isCopy = FALSE;
+  int                rc = ICC_OSSL_SUCCESS;
+  jint               sigsize = 0;
+  jint               datalen = 0;
+  jboolean           verified = 0;
+  unsigned long      errCode;
 
   if( debug ) {
     gslogFunctionEntry(functionName);
@@ -244,56 +246,85 @@ JNIEXPORT jboolean JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface
   }
 
   sigBytesNative = (unsigned char*)((*env)->GetPrimitiveArrayCritical(env, sigBytes,  &isCopy));
-  if(sigBytesNative == NULL) {
-#ifdef DEBUG_SIGNATURE_DETAIL
+  if (sigBytesNative == NULL) {
+#ifdef DEBUG_PQCSIGNATURE_DETAIL
     if ( debug ) {
       gslogMessage ("DETAIL_SIGNATURE FAILURE sigBytesNative "); 
     }
 #endif
     throwOCKException(env, 0, "GetPrimitiveArrayCritical failed");
   } else {
-    jint size = (*env)->GetArrayLength(env, sigBytes);
+    sigsize = (*env)->GetArrayLength(env, sigBytes);
 #ifdef DEBUG_SIGNATURE_DETAIL
+    if ( debug ) {
+      gslogMessage ("DETAIL_SIGNATURE ockPKeyId=%lx", (long) ockPKeyId);
+      gslogMessagePrefix("DETAIL_SIGNATURE to verify %d bytes:\n", (int)size);
+      gslogMessageHex((char *)sigBytesNative, 0, (int) size, 0, 0, NULL);
+      if (ockDigest != NULL) {
+        gslogMessage ("DETAIL_SIGNATURE ockDigest->mdCtx %lx", ockDigest->mdCtx);
+      }
+    }
+#endif
+    dataNative = (unsigned char*)((*env)->GetPrimitiveArrayCritical(env, data,  &isCopy));
+    if(dataNative == NULL) {
+#ifdef DEBUG_PQCSIGNATURE_DETAIL
       if ( debug ) {
-        gslogMessage ("DETAIL_SIGNATURE ockPKeyId=%lx", (long) ockPKeyId);
-        gslogMessagePrefix("DETAIL_SIGNATURE to verify %d bytes:\n", (int)size);
-        gslogMessageHex((char *)sigBytesNative, 0, (int) size, 0, 0, NULL);
-        if (ockDigest != NULL) {
-          gslogMessage ("DETAIL_SIGNATURE ockDigest->mdCtx %lx", ockDigest->mdCtx);
+        gslogMessage ("DETAIL_SIGNATURE FAILURE sigBytesNative "); 
+      }
+#endif
+      throwOCKException(env, 0, "GetPrimitiveArrayCritical failed");
+    } else {
+      datalen = (*env)->GetArrayLength(env, data);
+
+      /* EVP context */
+      evp_pk = ICC_EVP_PKEY_CTX_new(ockCtx, ockPKey, NULL);
+
+      if (!evp_pk) {
+        throwOCKException(env, 0, "ICC_EVP_PKEY_CTX_new failed");
+      } else {
+        rc = ICC_EVP_PKEY_verify_init(ockCtx, evp_pk);
+
+        if (rc != ICC_OSSL_SUCCESS) {
+          throwOCKException(env, 0, "ICC_EVP_PKEY_verify_init failed");
+        } else {
+          rc = ICC_EVP_PKEY_verify(ockCtx, evp_pk, sigBytesNative, sigsize, dataNative, datalen);
+#ifdef DEBUG_PQCSIGNATURE_DETAIL
+          if ( debug ) {
+            gslogMessage ("DETAIL_SIGNATURE rc %d", (int)rc );
+          }
+#endif
+          if( ICC_OSSL_SUCCESS == rc ) {
+            verified = 1;
+          } else {
+#ifdef DEBUG_PQCSIGNATURE_DETAIL
+            if ( debug ) {
+              gslogMessage ("DETAIL_SIGNATURE FAILURE ICC_EVP_VerifyFinal "); 
+            }
+#endif
+            errCode = ICC_ERR_peek_last_error(ockCtx);
+            if ( debug ) {
+              gslogMessage("errCode: %X", errCode);
+            }
+            if (errCode == 0x0D08303A) {
+              throwOCKException(env, 0, "nested asn1 error");
+            } else {
+              ockCheckStatus(ockCtx);
+              throwOCKException(env, 0, "ICC_EVP_VerifyFinal failed");         
+            }         
+          }
         }
       }
-#endif
-    rc = ICC_EVP_VerifyFinal(ockCtx, ockDigest->mdCtx, sigBytesNative, (unsigned int)size, ockPKey);
-#ifdef DEBUG_SIGNATURE_DETAIL
-      if ( debug ) {
-        gslogMessage ("DETAIL_SIGNATURE rc %d", (int)rc );
-      }
-#endif
-    if( ICC_OSSL_SUCCESS == rc ) {
-      verified = 1;
-    } else {
-#ifdef DEBUG_SIGNATURE_DETAIL
-      if ( debug ) {
-        gslogMessage ("DETAIL_SIGNATURE FAILURE ICC_EVP_VerifyFinal "); 
-      }
-#endif
-      errCode = ICC_ERR_peek_last_error(ockCtx);
-      if ( debug ) {
-        gslogMessage("errCode: %X", errCode);
-      }
-      if (errCode == 0x0D08303A) {
-        throwOCKException(env, 0, "nested asn1 error");
-      }
-      else{
-        throwOCKException(env, 0, "ICC_EVP_VerifyFinal failed");         
-      }         
-      ockCheckStatus(ockCtx);
-      throwOCKException(env, 0, "ICC_EVP_VerifyFinal failed");
     }
+  }
+  if ( evp_pk != NULL ) {
+    ICC_EVP_PKEY_CTX_free(ockCtx, evp_pk);
   }
 
   if( sigBytesNative != NULL ) {
     (*env)->ReleasePrimitiveArrayCritical(env, sigBytes,  sigBytesNative, 0);
+  }
+  if( dataNative != NULL ) {
+    (*env)->ReleasePrimitiveArrayCritical(env, data,  dataNative, 0);
   }
 
   if( debug ) {
