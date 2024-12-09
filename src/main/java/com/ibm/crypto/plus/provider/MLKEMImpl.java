@@ -68,13 +68,13 @@ public static class MLKEMImpl implements KEMSpi {
              if (!checkParameters(spec)) {
                  throw new InvalidAlgorithmParameterException("unsupported params");
              }
-             return new MLKEMDecapsulator(publicKey, spec, null);
+             return new MLKEMDecapsulator(privateKey, spec, null);
     }
 
     class MLKEMDecapsulator implements KEMSpi.DecapsulatorSpi {
         MyDecapsulator(PrivateKey privateKey, AlgorithmParameterSpec spec){
             this.spec = spec != null ? spec : getDefaultParameters();
-            this.publicKey = publicKey;
+            this.privateKey = priavteKey;
        }
 
        @Override
