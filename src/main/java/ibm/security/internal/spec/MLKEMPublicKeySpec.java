@@ -5,11 +5,8 @@
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution.
  */
-
 package ibm.security.internal.spec;
 
-import java.math.BigInteger;
-import java.security.AlgorithmParameters;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.KeySpec;
 

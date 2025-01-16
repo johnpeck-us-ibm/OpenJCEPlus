@@ -8,11 +8,10 @@
 
 package com.ibm.crypto.plus.provider;
 
+import com.ibm.crypto.plus.provider.ock.OCKMLKEMKey;
 import java.security.InvalidKeyException;
 import java.util.Arrays;
 import javax.security.auth.DestroyFailedException;
-import com.ibm.crypto.plus.provider.ock.OCKMLKEMKey;
-
 import sun.security.pkcs.PKCS8Key;
 import sun.security.x509.AlgorithmId;
 

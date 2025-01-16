@@ -8,7 +8,6 @@
 
 package com.ibm.crypto.plus.provider.ock;
 
-import java.math.BigInteger;
 import java.util.Arrays;
 
 public final class OCKMLKEMKey implements AsymmetricKey {

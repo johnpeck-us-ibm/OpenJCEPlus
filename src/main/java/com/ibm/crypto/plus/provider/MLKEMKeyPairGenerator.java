@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2024
+ * Copyright IBM Corp. 2024, 2025
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -8,12 +8,12 @@
 
 package com.ibm.crypto.plus.provider;
 
+import com.ibm.crypto.plus.provider.ock.OCKMLKEMKey;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyPair;
 import java.security.KeyPairGeneratorSpi;
 import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
-import com.ibm.crypto.plus.provider.ock.OCKMLKEMKey;
 
 abstract class MLKEMKeyPairGenerator extends KeyPairGeneratorSpi {
 

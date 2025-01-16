@@ -8,7 +8,6 @@
 
 package ibm.security.internal.interfaces;
 
-import java.math.BigInteger;
 import java.security.spec.AlgorithmParameterSpec;
 
 public interface MLKEMKey {

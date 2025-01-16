@@ -8,12 +8,12 @@
 
 package com.ibm.crypto.plus.provider;
 
+import ibm.security.internal.spec.MLKEMParameterSpec;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.AlgorithmParametersSpi;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.InvalidParameterSpecException;
-import ibm.security.internal.spec.MLKEMParameterSpec;
 import sun.security.util.DerOutputStream;
 import sun.security.util.DerValue;
 

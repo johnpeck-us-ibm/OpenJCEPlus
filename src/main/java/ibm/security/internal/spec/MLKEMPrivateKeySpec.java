@@ -5,7 +5,6 @@
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution.
  */
-
 package ibm.security.internal.spec;
 
 import java.security.AlgorithmParameters;
