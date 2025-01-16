@@ -6,18 +6,19 @@
  * in the file LICENSE in the source distribution.
  */
 
- package ibm.security.internal.spec;
+package ibm.security.internal.spec;
 
 import java.math.BigInteger;
 import java.security.AlgorithmParameters;
 import java.security.spec.AlgorithmParameterSpec;
+import java.security.spec.KeySpec;
 
 public class MLKEMPublicKeySpec implements KeySpec {
-    
+
     private final byte[] rawkeyE;
     private final AlgorithmParameterSpec params;
 
-     /**
+    /**
      * Creates a new MLKEMPublicKeySpec.
      *
      * @param rawekyE the bytes of the MLKEM public key
@@ -30,7 +31,7 @@ public class MLKEMPublicKeySpec implements KeySpec {
      * Creates a new MLKEMPublicKeySpec with additional key parameters.
      *
      * @param rawkeyE the bytes od the MLKEM public key
-     * @param params the parameters associated with this key, may be null
+     * @param params  the parameters associated with this key, may be null
      */
     public MLKEMPublicKeySpec(byte[] rawkeyE, AlgorithmParameterSpec params) {
         this.rawkeyE = rawkeyE;
@@ -42,7 +43,7 @@ public class MLKEMPublicKeySpec implements KeySpec {
      *
      * @return the public key raw bytes.
      */
-    public BigInteger getPublicKeyRawBytes() {
+    public byte[] getPublicKeyRawBytes() {
         return this.rawkeyE;
     }
 

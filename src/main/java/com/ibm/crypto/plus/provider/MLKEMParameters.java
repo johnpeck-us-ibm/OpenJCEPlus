@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2023
+ * Copyright IBM Corp. 2024, 2025
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -12,8 +12,8 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.security.AlgorithmParametersSpi;
 import java.security.spec.AlgorithmParameterSpec;
-import java.security.spec.DSAParameterSpec;
 import java.security.spec.InvalidParameterSpecException;
+import ibm.security.internal.spec.MLKEMParameterSpec;
 import sun.security.util.DerOutputStream;
 import sun.security.util.DerValue;
 
@@ -22,23 +22,23 @@ public final class MLKEMParameters extends AlgorithmParametersSpi {
     protected BigInteger n;
     protected BigInteger q;
     protected BigInteger k;
-    protected BigInteger n1;    
-    protected BigInteger n2;    
-    protected BigInteger du;    
-    protected BigInteger dv;    
-    protected int privKeyLen;    
+    protected BigInteger n1;
+    protected BigInteger n2;
+    protected BigInteger du;
+    protected BigInteger dv;
+    protected int privKeyLen;
     protected int publicKeyLen;
     protected int cipherTextLen;
 
     public MLKEMParameters() {
-        
+
     }
 
     /**
      * Initialize the MLKEMParameters by a MLKEMParameterSpec
      *
      * @param paramSpec
-     *            the ML-KEM algorithm parameter spec for this instance.
+     *                  the ML-KEM algorithm parameter spec for this instance.
      */
     @Override
     protected void engineInit(AlgorithmParameterSpec paramSpec)
@@ -54,15 +54,15 @@ public final class MLKEMParameters extends AlgorithmParametersSpi {
         this.du = ((MLKEMParameterSpec) paramSpec).getDU();
         this.dv = ((MLKEMParameterSpec) paramSpec).getDV();
         this.privKeyLen = ((MLKEMParameterSpec) paramSpec).getPrivateKeyLen();
-        this.publicKeyLen = ((MLKEMParameterSpec) paramSpec).getPublicKeyLen();
+        this.publicKeyLen = ((MLKEMParameterSpec) paramSpec).getPublcKeyLen();
         this.cipherTextLen = ((MLKEMParameterSpec) paramSpec).getCipherTextLen();
     }
 
     /**
-     * Initialize the MLKEMParameters by encoded bytes  //TODO
+     * Initialize the MLKEMParameters by encoded bytes
      *
      * @param params
-     *            the encoded bytes of the parameters.
+     *               the encoded bytes of the parameters.
      */
     @Override
     protected void engineInit(byte[] params) throws IOException {
@@ -73,8 +73,6 @@ public final class MLKEMParameters extends AlgorithmParametersSpi {
         }
 
         encoded.getData().reset();
-
-
 
         if (encoded.getData().available() != 0) {
             throw new IOException(
@@ -87,9 +85,9 @@ public final class MLKEMParameters extends AlgorithmParametersSpi {
      * method.
      *
      * @param params
-     *            the encoded bytes of the parameters.
+     *                       the encoded bytes of the parameters.
      * @param decodingMethod
-     *            the decoding method to be used.
+     *                       the decoding method to be used.
      */
     @Override
     protected void engineInit(byte[] params, String format) throws IOException {
@@ -100,7 +98,7 @@ public final class MLKEMParameters extends AlgorithmParametersSpi {
      * Return the parameter spec used by this parameter instance.
      *
      * @param paramSpec
-     *            the parameter spec class to be returned
+     *                  the parameter spec class to be returned
      *
      * @return AlgorithmParameterSpec the newly generated parameterSpec
      */
@@ -108,9 +106,9 @@ public final class MLKEMParameters extends AlgorithmParametersSpi {
     protected <T extends AlgorithmParameterSpec> T engineGetParameterSpec(Class<T> paramSpec)
             throws InvalidParameterSpecException {
         try {
-            Class<?> dsaParamSpec = Class.forName("java.security.spec.DSAParameterSpec");
-            if (dsaParamSpec.isAssignableFrom(paramSpec)) {
-                return paramSpec.cast(new DSAParameterSpec(this.p, this.q, this.g));
+            Class<?> MLKEMParamSpec = Class.forName("ibm.security.internal.spec.MLKEMParameterSpec");
+            if (MLKEMParamSpec.isAssignableFrom(paramSpec)) {
+                return paramSpec.cast(new MLKEMParameterSpec(this.k));
             } else {
                 throw new InvalidParameterSpecException("Inappropriate parameter Specification");
             }
@@ -132,9 +130,16 @@ public final class MLKEMParameters extends AlgorithmParametersSpi {
         try {
             out = new DerOutputStream();
             bytes = new DerOutputStream();
-            bytes.putInteger(this.p);
+            bytes.putInteger(this.n);
             bytes.putInteger(this.q);
-            bytes.putInteger(this.g);
+            bytes.putInteger(this.k);
+            bytes.putInteger(this.n1);
+            bytes.putInteger(this.n2);
+            bytes.putInteger(this.du);
+            bytes.putInteger(this.dv);
+            bytes.putInteger(this.privKeyLen);
+            bytes.putInteger(this.publicKeyLen);
+            bytes.putInteger(this.cipherTextLen);
             out.write(DerValue.tag_Sequence, bytes);
             return out.toByteArray();
         } finally {
@@ -158,8 +163,7 @@ public final class MLKEMParameters extends AlgorithmParametersSpi {
      */
     @Override
     protected String engineToString() {
-        return "\n\tp: " + p.toString() + "\n\tq: " + q.toString() + "\n\tg: " + g.toString()
-                + "\n";
+        return "\n\tk: " + k.toString() + "\n";
     }
 
 }

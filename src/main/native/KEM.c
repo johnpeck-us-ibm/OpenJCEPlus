@@ -145,7 +145,7 @@ JNIEXPORT void JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_KEM
  * Signature: (J[B)J
  */
 JNIEXPORT jlong JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_KEM_1decapsulate
-  (JNIEnv *env, jclass thisObj, jlong ockContextId, jstring cipherName, jbyteArray privateKeyBytes, jbyteArray wrappedKey, jbyteArray randomKey)
+  (JNIEnv *env, jclass thisObj, jlong ockContextId, jbyteArray privateKeyBytes, jbyteArray wrappedKey, jbyteArray randomKey)
 {
   static const char * functionName = "NativeInterface.KEM_decapsulate";
 

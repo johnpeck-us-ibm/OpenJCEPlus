@@ -6,20 +6,18 @@
  * in the file LICENSE in the source distribution.
  */
 
- package ibm.security.internal.spec;
+package ibm.security.internal.spec;
 
-import java.math.BigInteger;
 import java.security.AlgorithmParameters;
-import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.KeySpec;
 
 public class MLKEMPrivateKeySpec implements KeySpec {
 
     private final byte[] rawkeyD;
     private final byte[] rawkeyE;
-    private final AlgorithmParameterSpec params;
+    private final AlgorithmParameters params;
 
-     /**
+    /**
      * Creates a new MLKEMPrivateKeySpec.
      *
      * @param rawekyD the bytes of the MLKEM private key
@@ -27,15 +25,15 @@ public class MLKEMPrivateKeySpec implements KeySpec {
     public MLKEMPrivateKeySpec(byte[] rawkeyD) {
         this(rawkeyD, null, null);
     }
-     
+
     /**
      * Creates a new MLKEMPrivateKeySpec.
      *
      * @param rawkeyD the bytes of the MLKEM private key
-     * @param params the MLKEM Parameters for this key
+     * @param params  the MLKEM Parameters for this key
      */
-    public MlKEMPrivateKeySpec(byte[] rawkeyD, AlgorithmParameters params) {
-        this(rawkeyD, null, params);
+    public MLKEMPrivateKeySpec(byte[] rawkeyD, AlgorithmParameters params) {
+        this(rawkeyD, (byte[]) null, params);
     }
 
     /**
@@ -43,9 +41,9 @@ public class MLKEMPrivateKeySpec implements KeySpec {
      *
      * @param rawkeyD the bytes of the MLKEM private key
      * @param rawkeyE the bytes od the MLKEM public key, may be null
-     * @param params the parameters associated with this key, may be null
+     * @param params  the parameters associated with this key, may be null
      */
-    public MLEKMPrivateKeySpec(byte[] rawkeyD, byte[] rawkeyE, AlgorithmParameterSpec params) {
+    public MLKEMPrivateKeySpec(byte[] rawkeyD, byte[] rawkeyE, AlgorithmParameters params) {
         this.rawkeyD = rawkeyD;
         this.rawkeyE = rawkeyE;
         this.params = params;
@@ -56,7 +54,7 @@ public class MLKEMPrivateKeySpec implements KeySpec {
      *
      * @return the the raw key bytes for this private key
      */
-    public BigInteger getPrivateKeyRawBytes() {
+    public byte[] getPrivateKeyRawBytes() {
         return this.rawkeyD;
     }
 
@@ -65,7 +63,7 @@ public class MLKEMPrivateKeySpec implements KeySpec {
      *
      * @return the public key raw bytes.
      */
-    public BigInteger getPublicKeyRawBytes() {
+    public byte[] getPublicKeyRawBytes() {
         return this.rawkeyE;
     }
 
@@ -75,7 +73,7 @@ public class MLKEMPrivateKeySpec implements KeySpec {
      *
      * @return the parameters associated with this key
      */
-    public AlgorithmParameterSpec getParams() {
+    public AlgorithmParameters getParams() {
         return this.params;
     }
 }

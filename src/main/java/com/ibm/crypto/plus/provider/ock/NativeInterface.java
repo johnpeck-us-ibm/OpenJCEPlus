@@ -986,28 +986,44 @@ final class NativeInterface {
     static public native int HKDF_size(long ockContextId, long hkdfId) throws OCKException;
 
     // =========================================================================
-    // ML-KEM key functions
+    // ML-KEY key functions
     // =========================================================================
 
-    static public native long MLKEMKEY_generate(long ockContextId, int numBits, long e)
+    static public native long MLKEY_generate(long ockContextId, String cipherName)
             throws OCKException;
 
-    static public native long MLKEMKEY_createPrivateKey(long ockContextId, byte[] privateKeyBytes)
+    static public native long MLKEY_createPrivateKey(long ockContextId, String cipherName, byte[] privateKeyBytes)
             throws OCKException;
 
-    static public native long MLKEMKEY_createPublicKey(long ockContextId, byte[] publicKeyBytes)
+    static public native long MLKEY_createPublicKey(long ockContextId, byte[] publicKeyBytes)
             throws OCKException;
 
-    static public native byte[] MLKEMKEY_getPrivateKeyBytes(long ockContextId, long rsaKeyId)
+    static public native byte[] MLKEY_getPrivateKeyBytes(long ockContextId, long mlkeyId)
             throws OCKException;
 
-    static public native byte[] MLKEMKEY_getPublicKeyBytes(long ockContextId, long rsaKeyId)
+    static public native byte[] MLKEY_getPublicKeyBytes(long ockContextId, long mlkeyId)
             throws OCKException;
 
-    static public native long MLKEMKEY_createPKey(long ockContextId, long rsaKeyId)
+    static public native long MLKEY_createPKey(long ockContextId, long mlkeyId)
             throws OCKException;
 
-    static public native int MLKEMKEY_size(long ockContextId, long rsaKeyId);
+    static public native void MLKEY_delete(long ockContextId, long mlkeyId);
 
-    static public native void MLKEMKEY_delete(long ockContextId, long rsaKeyId);
+    // =========================================================================
+    // Key Encapsulation functions
+    // =========================================================================
+    static public native void KEM_encapsulate(long ockContextId, byte[] publcKeyBytes, byte[] wrappedKey, byte[] randomKey)
+            throws OCKException;
+
+    static public native void KEM_decapsulate(long ockContextId, byte[] privateKeyBytes, byte[] wrappedKey, byte[] randomKey)
+            throws OCKException;
+
+    // =========================================================================
+    // PQC Signture functions - for use with ML-DSA and ML-SLH
+    // =========================================================================
+    static public native byte[] PQC_SIGNATURE_sign(long ockContextId,  long ockPKeyId, byte[] data) 
+            throws OCKException;
+
+    static public native boolean PQC_SIGNATURE_verify(long ockContextId, long ockPKeyId, byte[] sigBytes, byte[] data) 
+            throws OCKException;
 }

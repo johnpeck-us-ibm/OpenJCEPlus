@@ -11,34 +11,36 @@ package ibm.security.internal.spec;
 import java.math.BigInteger;
 import java.security.spec.AlgorithmParameterSpec;
 
-
 public class MLKEMParameterSpec implements AlgorithmParameterSpec {
 
     // Key Parameters.
     protected BigInteger n;
     protected BigInteger q;
     protected BigInteger k;
-    protected BigInteger n1;    
-    protected BigInteger n2;    
-    protected BigInteger du;    
-    protected BigInteger dv;    
-    protected int privKeyLen;    
+    protected BigInteger n1;
+    protected BigInteger n2;
+    protected BigInteger du;
+    protected BigInteger dv;
+    protected int privKeyLen;
     protected int publicKeyLen;
     protected int cipherTextLen;
-
 
     /**
      * Constructs a CCMParameterSpec object using the specified
      * authentication tag bit-length and the specified initialization vector.
      *
-     * @param k the K parameter for ML-KEM key pairs. All other parameters based off the k value.
+     * @param k the K parameter for ML-KEM key pairs. All other parameters based off
+     *          the k value.
      *
-     * @throws IllegalArgumentException if {@code tLen} is not an integer multiple of 16
-     * between 32 and 128 inclusive, or if {@code iv} is null,
-     * or if the byte length of {@code iv} is not between 7 to 13 inclusive.
+     * @throws IllegalArgumentException if {@code tLen} is not an integer multiple
+     *                                  of 16
+     *                                  between 32 and 128 inclusive, or if
+     *                                  {@code iv} is null,
+     *                                  or if the byte length of {@code iv} is not
+     *                                  between 7 to 13 inclusive.
      */
-    public MLKEMParameterSpec(int k) {
-        if ((k < 2) && (k > 4)) {
+    public MLKEMParameterSpec(BigInteger k) {
+        if ((k.intValue() < 2) && (k.intValue() > 4)) {
             throw new IllegalArgumentException("k was be 2, 3, or 4");
         }
 
@@ -48,15 +50,15 @@ public class MLKEMParameterSpec implements AlgorithmParameterSpec {
     /*
      * Check input parameters.
      */
-    private void init(int k) {
+    private void init(BigInteger k) {
 
-        if ((k < 2) || (k > 4)) {
+        if ((k.intValue() < 2) || (k.intValue() > 4)) {
             throw new IllegalArgumentException(
                     "k key parameter must be 2, 3 or 4.");
         }
-        this.k = new BigInterger(k);
+        this.k = k;
 
-        setParameters(this.k)
+        setParameters(this.k);
 
     }
 
@@ -110,12 +112,12 @@ public class MLKEMParameterSpec implements AlgorithmParameterSpec {
      *
      * @return the value of the N1 parameter
      */
-    public int getN1() {
+    public BigInteger getN1() {
 
         return this.n1;
     }
 
-        /**
+    /**
      * Returns the value of the N2 parameter.
      *
      * @return N2 parameter
@@ -154,6 +156,7 @@ public class MLKEMParameterSpec implements AlgorithmParameterSpec {
 
         return this.privKeyLen;
     }
+
     /**
      * Returns the public key byte length.
      *
@@ -163,7 +166,7 @@ public class MLKEMParameterSpec implements AlgorithmParameterSpec {
 
         return this.publicKeyLen;
     }
-    
+
     /**
      * Returns the cipher text byte length.
      *
@@ -173,7 +176,7 @@ public class MLKEMParameterSpec implements AlgorithmParameterSpec {
 
         return this.cipherTextLen;
     }
-        
+
     /**
      * Returns the strength of the shared Secret key in bits.
      *
@@ -186,6 +189,7 @@ public class MLKEMParameterSpec implements AlgorithmParameterSpec {
 
     /**
      * FIll in all the other parameters
+     * 
      * @param k
      * 
      */
@@ -194,31 +198,31 @@ public class MLKEMParameterSpec implements AlgorithmParameterSpec {
         this.q = new BigInteger("3329");
         this.k = k;
 
-        switch (k) {
+        switch (k.intValue()) {
             case 2:
-                this.n1 = new BigInteger("3");    
-                this.n2 = new BigInteger("2");    
-                this.du = new BigInteger("10");    
-                this.dv = new BigInteger("4");    
-                this.privKeyLen = 800;    
+                this.n1 = new BigInteger("3");
+                this.n2 = new BigInteger("2");
+                this.du = new BigInteger("10");
+                this.dv = new BigInteger("4");
+                this.privKeyLen = 800;
                 this.publicKeyLen = 1632;
                 this.cipherTextLen = 768;
                 break;
-            case 3:              
-                this.n1 = new BigInteger("2");    
-                this.n2 = new BigInteger("2");    
-                this.du = new BigInteger("10");    
-                this.dv = new BigInteger("4");    
-                this.privKeyLen = 1184;    
+            case 3:
+                this.n1 = new BigInteger("2");
+                this.n2 = new BigInteger("2");
+                this.du = new BigInteger("10");
+                this.dv = new BigInteger("4");
+                this.privKeyLen = 1184;
                 this.publicKeyLen = 2400;
                 this.cipherTextLen = 1088;
                 break;
-            case 4:               
-                this.n1 = new BigInteger("2");    
-                this.n2 = new BigInteger("2");    
-                this.du = new BigInteger("11");    
-                this.dv = new BigInteger("5");    
-                this.privKeyLen = 1568;    
+            case 4:
+                this.n1 = new BigInteger("2");
+                this.n2 = new BigInteger("2");
+                this.du = new BigInteger("11");
+                this.dv = new BigInteger("5");
+                this.privKeyLen = 1568;
                 this.publicKeyLen = 3168;
                 this.cipherTextLen = 1568;
                 break;

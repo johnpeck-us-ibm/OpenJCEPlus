@@ -3,7 +3,6 @@ package com.ibm.crypto.plus.provider;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-
 import com.ibm.misc.Debug;
 
 public enum PQCKnownOIDs {
@@ -34,11 +33,11 @@ public enum PQCKnownOIDs {
     private String stdName;
     private String oid;
     private String[] aliases;
-    private static final Debug debug = Debug.getInstance("jceplus");
+    private static final Debug debug = Debug.getInstance("openjceplus");
 
     // find the matching enum using either name or string of oid
     // return null if not found
-    public static KnownOIDs findMatch(String x) {
+    public static PQCKnownOIDs findMatch(String x) {
         x = x.toUpperCase(Locale.ENGLISH);
         PQCKnownOIDs fnd = name2enum.get(x);
         if (fnd == null && debug != null) {
@@ -79,17 +78,6 @@ public enum PQCKnownOIDs {
             if (debug != null) {
                 System.out.println(nameUppered + " => " + pqcoid.name());
             }
-            //This code not used, but might be in the future when QPC algs have a finished stamdard
-            for (String a :  o.aliases) {
-                String aliasUpper = a.toUpperCase(Locale.ENGLISH);
-                if (Objects.nonNull(name2enum.put(aliasUpper, pqcoid))) {
-                    throw new RuntimeException("ERROR: Duplicate " +
-                            aliasUpper + " exists already");
-                }
-                if (debug != null) {
-                    System.out.println(aliasUpper + " => " + pqcoid.name());
-                }
-            }
         }
     }
 
@@ -101,7 +89,7 @@ public enum PQCKnownOIDs {
         this.aliases = new String[0];
     }
 
-    private KnownOIDs(String oid, String stdName, String ... aliases) {
+    private PQCKnownOIDs(String oid, String stdName, String ... aliases) {
         this.oid = oid;
         this.stdName = stdName;
         this.aliases = aliases;

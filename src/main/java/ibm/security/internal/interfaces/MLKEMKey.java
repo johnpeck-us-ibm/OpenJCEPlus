@@ -6,8 +6,6 @@
  * in the file LICENSE in the source distribution.
  */
 
-public class MLKEMKey {
-
 package ibm.security.internal.interfaces;
 
 import java.math.BigInteger;
@@ -22,7 +20,7 @@ public interface MLKEMKey {
      * key pair generation.
      *
      * @implSpec
-     * The default implementation returns {@code null}.
+     *           The default implementation returns {@code null}.
      *
      * @return the associated parameters, may be null
      * @since 21
@@ -30,5 +28,4 @@ public interface MLKEMKey {
     default AlgorithmParameterSpec getParams() {
         return null;
     }
-}
 }

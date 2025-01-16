@@ -24,7 +24,7 @@
  * Signature: (JI)J
  */
 JNIEXPORT jlong JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_MLKEY_1generate
-  (JNIEnv *env, jclass thisObj, jlong ockContextId, jstring cipherName, jlong e)
+  (JNIEnv *env, jclass thisObj, jlong ockContextId, jstring cipherName)
 {
   static const char * functionName = "NativeInterface.MLKEY_generate";
 
@@ -198,7 +198,7 @@ JNIEXPORT jlong JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_ML
  * Signature: (J[B)J
  */
 JNIEXPORT jlong JNICALL Java_com_ibm_crypto_plus_provider_ock_NativeInterface_MLKEY_1createPublicKey
-  (JNIEnv *env, jclass thisObj, jlong ockContextId, jstring cipherName, jbyteArray publicKeyBytes)
+  (JNIEnv *env, jclass thisObj, jlong ockContextId, jbyteArray publicKeyBytes)
 {
   static const char * functionName = "NativeInterface.MLKEY_createPublicKey";
 
