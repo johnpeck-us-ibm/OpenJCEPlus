@@ -8,17 +8,18 @@
 
 package com.ibm.crypto.plus.provider;
 
+import com.ibm.crypto.plus.provider.ock.ECKey;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.AlgorithmParameters;
 import java.security.InvalidKeyException;
 import java.security.Key;
+import java.security.ProviderException;
+import java.security.PublicKey;
 import java.security.spec.ECParameterSpec;
 import java.security.spec.InvalidParameterSpecException;
 import java.util.Arrays;
 import javax.security.auth.DestroyFailedException;
-import com.ibm.crypto.plus.provider.ock.ECKey;
-
 import sun.security.pkcs.PKCS8Key;
 import sun.security.util.DerInputStream;
 import sun.security.util.DerOutputStream;
@@ -570,6 +571,16 @@ final class ECPrivateKey extends PKCS8Key implements java.security.interfaces.EC
 
     ECKey getOCKKey() {
         return this.ecKey;
+    }
+
+    @Override
+    public PublicKey calculatePublicKey() {
+        try {
+            return new ECPublicKey(provider, ecKey);
+        } catch (InvalidKeyException exc) {
+            throw new ProviderException(
+                    "Unexpected error calculating public key", exc);
+        }
     }
 
     /**
