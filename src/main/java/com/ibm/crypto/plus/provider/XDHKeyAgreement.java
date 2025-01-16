@@ -8,6 +8,9 @@
 
 package com.ibm.crypto.plus.provider;
 
+
+import com.ibm.crypto.plus.provider.ock.OCKException;
+import com.ibm.crypto.plus.provider.ock.XECKey;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
@@ -17,14 +20,10 @@ import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.NamedParameterSpec;
 import java.security.spec.XECPrivateKeySpec;
-
 import javax.crypto.KeyAgreementSpi;
 import javax.crypto.SecretKey;
 import javax.crypto.ShortBufferException;
 import javax.crypto.spec.SecretKeySpec;
-
-import com.ibm.crypto.plus.provider.ock.OCKException;
-import com.ibm.crypto.plus.provider.ock.XECKey;
 
 abstract class XDHKeyAgreement extends KeyAgreementSpi {
 
@@ -111,7 +110,7 @@ abstract class XDHKeyAgreement extends KeyAgreementSpi {
             this.secret = XECKey.computeECDHSecret(provider.getOCKContext(), genCtx,
                     ockXecKeyPub.getPKeyId(), ockXecKeyPriv.getPKeyId(), secrectBufferSize);
         } catch (OCKException e) {
-            throw new IllegalStateException(e.getMessage());
+            throw new IllegalStateException("Failed to generate secret", e);
         } catch (Exception e) {
             throw new InvalidKeyException("Failed to generate secret", e);
         }

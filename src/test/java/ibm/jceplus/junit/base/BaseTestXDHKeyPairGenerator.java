@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2023
+ * Copyright IBM Corp. 2023, 2024
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -10,54 +10,58 @@ package ibm.jceplus.junit.base;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.interfaces.XECPrivateKey;
 import java.security.interfaces.XECPublicKey;
 import java.security.spec.NamedParameterSpec;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import sun.security.util.InternalPrivateKey;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
-public class BaseTestXDHKeyPairGenerator extends ibm.jceplus.junit.base.BaseTest {
+public class BaseTestXDHKeyPairGenerator extends BaseTestJunit5 {
 
     KeyPairGenerator kpg = null;
     KeyPairGenerator kpgc = null;
 
-    @Before
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
-        kpg = KeyPairGenerator.getInstance("XDH", providerName);
-        kpgc = KeyPairGenerator.getInstance("XDH", providerName);
+    @BeforeEach
+    public void setUp() throws Exception {
+        kpg = KeyPairGenerator.getInstance("XDH", getProviderName());
+        kpgc = KeyPairGenerator.getInstance("XDH", getProviderName());
     }
 
-    public BaseTestXDHKeyPairGenerator(String providerName) {
-        super(providerName);
-    }
-
-    public void tearDown() throws Exception {}
-
+    @Test
     public void testXECKeyGen_X255() throws Exception {
         doXECKeyGen(255);
     }
 
+    @Test
     public void testXECKeyGen_X448() throws Exception {
         doXECKeyGen(448);
     }
 
+    @Test
     public void testXECKeyGen_FFDHE2048() throws Exception {
         doXECKeyGen(2048);
     }
 
+    @Test
     public void testXECKeyGen_FFDHE3072() throws Exception {
         doXECKeyGen(3072);
     }
 
+    @Test
     public void testXECKeyGen_FFDHE4096() throws Exception {
         doXECKeyGen(4096);
     }
 
+    @Test
     public void testXECKeyGen_FFDHE6144() throws Exception {
         doXECKeyGen(6144);
     }
 
+    @Test
     public void testXECKeyGen_FFDHE8192() throws Exception {
         doXECKeyGen(8192);
     }
@@ -82,6 +86,24 @@ public class BaseTestXDHKeyPairGenerator extends ibm.jceplus.junit.base.BaseTest
         //System.out.println("ECPrivate: " + ecpr.getS());
     }
 
+    @Test
+    public void testXDHPrivateKey_calculatePublicKey() throws Exception {
+        kpg.initialize(255);
+        KeyPair kp = kpg.generateKeyPair();
+
+        PublicKey ecpu = kp.getPublic();
+        PrivateKey ecpr = kp.getPrivate();
+
+        byte[] originalEncoded = ecpu.getEncoded();
+        byte[] calculatedEncoded = ((InternalPrivateKey) ecpr).calculatePublicKey().getEncoded();
+
+        System.out.println("---- Comparing XDH public key from KeyPair vs calculated from private key ----");
+        System.out.println("XDH public key from Keypair: " + BaseUtils.bytesToHex(originalEncoded));
+        System.out.println("XDH public key from calculatePublicKey(): " + BaseUtils.bytesToHex(calculatedEncoded));
+        assertArrayEquals(originalEncoded, calculatedEncoded);
+    }
+
+    @Test
     public void testXECKeyGenCurves() throws Exception {
         generictestXECKeyGenCurve("X25519");
         generictestXECKeyGenCurve("X448");
