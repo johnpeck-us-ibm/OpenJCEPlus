@@ -10,7 +10,7 @@ package com.ibm.crypto.plus.provider.ock;
 
 import java.util.Arrays;
 
-public final class OCKMLKEMKey implements AsymmetricKey {
+public final class OCKPQCKey implements AsymmetricKey {
 
     // The following is a special byte[] instance to indicate that the
     // private/public key bytes are available but not yet obtained.
@@ -24,7 +24,7 @@ public final class OCKMLKEMKey implements AsymmetricKey {
     private byte[] publicKeyBytes;
     private final static String badIdMsg = "ML-KEM Key Identifier is not valid";
 
-    public static OCKMLKEMKey generateKeyPair(OCKContext ockContext, String algName)
+    public static OCKPQCKey generateKeyPair(OCKContext ockContext, String algName)
             throws OCKException {
         // final String methodName = "generateKeyPair ";
         if (ockContext == null) {
@@ -33,10 +33,10 @@ public final class OCKMLKEMKey implements AsymmetricKey {
 
         long mlkemKeyId = NativeInterface.MLKEY_generate(ockContext.getId(), algName);
 
-        return new OCKMLKEMKey(ockContext, mlkemKeyId, unobtainedKeyBytes, unobtainedKeyBytes);
+        return new OCKPQCKey(ockContext, mlkemKeyId, unobtainedKeyBytes, unobtainedKeyBytes);
     }
 
-    public static OCKMLKEMKey createPrivateKey(OCKContext ockContext, String algName, byte[] privateKeyBytes)
+    public static OCKPQCKey createPrivateKey(OCKContext ockContext, String algName, byte[] privateKeyBytes)
             throws OCKException {
         // final String methodName = "createPrivateKey ";
         if (ockContext == null) {
@@ -49,10 +49,10 @@ public final class OCKMLKEMKey implements AsymmetricKey {
 
         long MLKEMKeyId = NativeInterface.MLKEY_createPrivateKey(ockContext.getId(), algName,
                 privateKeyBytes);
-        return new OCKMLKEMKey(ockContext, MLKEMKeyId, privateKeyBytes.clone(), null);
+        return new OCKPQCKey(ockContext, MLKEMKeyId, privateKeyBytes.clone(), null);
     }
 
-    public static OCKMLKEMKey createPublicKey(OCKContext ockContext, byte[] publicKeyBytes)
+    public static OCKPQCKey createPublicKey(OCKContext ockContext, byte[] publicKeyBytes)
             throws OCKException {
         // final String methodName = "createPublicKey ";
         if (ockContext == null) {
@@ -65,10 +65,10 @@ public final class OCKMLKEMKey implements AsymmetricKey {
 
         long MLKEMKeyId = NativeInterface.MLKEY_createPublicKey(ockContext.getId(), publicKeyBytes);
         // OCKDebug.Msg (debPrefix, methodName, "mlkemKeyId :" + mlkemKeyId);
-        return new OCKMLKEMKey(ockContext, MLKEMKeyId, null, publicKeyBytes.clone());
+        return new OCKPQCKey(ockContext, MLKEMKeyId, null, publicKeyBytes.clone());
     }
 
-    private OCKMLKEMKey(OCKContext ockContext, long mlkemKeyId, byte[] privateKeyBytes,
+    private OCKPQCKey(OCKContext ockContext, long mlkemKeyId, byte[] privateKeyBytes,
             byte[] publicKeyBytes) {
         this.ockContext = ockContext;
         this.mlkemKeyId = mlkemKeyId;

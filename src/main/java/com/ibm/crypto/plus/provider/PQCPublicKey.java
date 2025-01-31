@@ -8,7 +8,7 @@
 
 package com.ibm.crypto.plus.provider;
 
-import com.ibm.crypto.plus.provider.ock.OCKMLKEMKey;
+import com.ibm.crypto.plus.provider.ock.OCKPQCKey;
 import java.security.InvalidKeyException;
 import java.util.Arrays;
 import javax.security.auth.DestroyFailedException;
@@ -18,31 +18,31 @@ import sun.security.x509.AlgorithmId;
 import sun.security.x509.X509Key;
 
 @SuppressWarnings("restriction")
-final class MLKEMPublicKey extends X509Key
+final class PQCPublicKey extends X509Key
         implements Destroyable {
 
-    /**
-     * 
-     */
 
-    private static final long serialVersionUID = -2993913181811776154L; // TODO
+
+    private static final long serialVersionUID = -29954L; // TODO
 
     private OpenJCEPlusProvider provider = null;
-    private byte[] key = null;
-    private byte[] encodedKey = null;
+    private byte[] rawKey = null;
+    private String name;
 
     private transient boolean destroyed = false;
-    private transient OCKMLKEMKey mlkemKey = null; // Transient per tag [SERIALIZATION] in DesignNotes.txt
+    private transient OCKPQCKey pqcKey = null; // Transient per tag [SERIALIZATION] in DesignNotes.txt
 
-    public MLKEMPublicKey(AlgorithmId algId, OpenJCEPlusProvider provider, byte[] rawKeyE)
+    public PQCPublicKey(OpenJCEPlusProvider provider, byte[] rawKey, String algName)
             throws InvalidKeyException {
-        this.algid = algId;
+        this.algid = new AlgorithmId(PQCAlgorithmId.getOID(algName));
         this.provider = provider;
-        this.key = rawKeyE;
-        setKey(new BitArray(this.key.length * 8, this.key));
+        this.rawKey = rawKey;
+        this.name = algName;
+
+        setKey(new BitArray(this.rawKey.length * 8, this.rawKey));
 
         try {
-            this.mlkemKey = OCKMLKEMKey.createPublicKey(provider.getOCKContext(), this.key);
+            this.pqcKey = OCKPQCKey.createPublicKey(provider.getOCKContext(), getEncoded());
         } catch (Exception exception) {
             InvalidKeyException ike = new InvalidKeyException("Failed to create RSA public key");
             provider.setOCKExceptionCause(ike, exception);
@@ -50,24 +50,25 @@ final class MLKEMPublicKey extends X509Key
         }
     }
 
-    public MLKEMPublicKey(OpenJCEPlusProvider provider, OCKMLKEMKey mlkemKey) {
+    public PQCPublicKey(OpenJCEPlusProvider provider, OCKPQCKey pqcKey) {
         try {
             this.provider = provider;
-            this.key = mlkemKey.getPublicKeyBytes();
-            this.mlkemKey = mlkemKey;
+            this.rawKey = pqcKey.getPublicKeyBytes();
+            setKey(new BitArray(this.rawKey.length * 8, this.rawKey));
+            this.pqcKey = pqcKey;
         } catch (Exception exception) {
             throw provider.providerException("Failure in DHPublicKey", exception);
         }
     }
 
-    public MLKEMPublicKey(OpenJCEPlusProvider provider, byte[] encoded) throws InvalidKeyException {
+    public PQCPublicKey(OpenJCEPlusProvider provider, byte[] encoded) throws InvalidKeyException {
         this.provider = provider;
 
         try {
             decode(encoded);
 
-            this.mlkemKey = OCKMLKEMKey.createPublicKey(provider.getOCKContext(),
-                    /* publicKeyBytes */ this.key);
+            this.pqcKey = OCKPQCKey.createPublicKey(provider.getOCKContext(),
+                    /* publicKeyBytes */ this.rawKey);
         } catch (Exception e) {
             throw provider.providerException("Failure in MLKEMPublicKey", e);
         }
@@ -79,19 +80,7 @@ final class MLKEMPublicKey extends X509Key
     @Override
     public String getAlgorithm() {
         checkDestroyed();
-        String algName = null;
-        int size = this.key.length;
-        switch (size) {
-            case 1632:
-                algName = "ML_KEM_512";
-                break;
-            case 2400:
-                algName = "ML_KEM_768";
-                break;
-            case 3168:
-                algName = "ML_KEM_1024";
-        }
-        return algName;
+        return name;
     }
 
     /**
@@ -110,8 +99,8 @@ final class MLKEMPublicKey extends X509Key
         return (byte[]) this.encodedKey.clone();
     }
 
-    OCKMLKEMKey getOCKKey() {
-        return this.mlkemKey;
+    OCKPQCKey getOCKKey() {
+        return this.pqcKey;
     }
 
     /**
@@ -126,10 +115,10 @@ final class MLKEMPublicKey extends X509Key
     public void destroy() throws DestroyFailedException {
         if (!destroyed) {
             destroyed = true;
-            if (this.key != null) {
-                Arrays.fill(this.key, (byte) 0x00);
+            if (this.rawKey != null) {
+                Arrays.fill(this.rawKey, (byte) 0x00);
             }
-            this.key = null;
+            this.rawKey = null;
         }
     }
 
@@ -148,7 +137,7 @@ final class MLKEMPublicKey extends X509Key
     public String toString() {
         // public String toString() {
         StringBuffer strbuf = new StringBuffer("OpenJCEPlus ML-KEM Public Key:\n" + "k:\n"
-                + (this.key).toString() + "\n");
+                + (this.rawKey).toString() + "\n");
 
         return strbuf.toString();
     }

@@ -43,7 +43,7 @@ public class MLKEMImpl implements KEMSpi {
     public KEMSpi.EncapsulatorSpi engineNewEncapsulator(PublicKey publicKey,
             AlgorithmParameterSpec spec, SecureRandom secureRandom)
             throws InvalidAlgorithmParameterException, InvalidKeyException {
-        if (!(publicKey instanceof MLKEMPublicKey)) {
+        if (!(publicKey instanceof PQCPublicKey)) {
             throw new InvalidKeyException("unsupported key");
         }
 
@@ -101,7 +101,7 @@ public class MLKEMImpl implements KEMSpi {
     public KEMSpi.DecapsulatorSpi engineNewDecapsulator(PrivateKey privateKey,
             AlgorithmParameterSpec spec)
             throws InvalidAlgorithmParameterException, InvalidKeyException {
-        if (!(privateKey instanceof MLKEMPrivateKey)) {
+        if (!(privateKey instanceof PQCPrivateKey)) {
             throw new InvalidKeyException("unsupported key");
         }
 

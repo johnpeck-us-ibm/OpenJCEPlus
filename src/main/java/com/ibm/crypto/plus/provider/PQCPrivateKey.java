@@ -8,47 +8,58 @@
 
 package com.ibm.crypto.plus.provider;
 
-import com.ibm.crypto.plus.provider.ock.OCKMLKEMKey;
+import com.ibm.crypto.plus.provider.ock.OCKPQCKey;
+
+import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.util.Arrays;
 import javax.security.auth.DestroyFailedException;
 import sun.security.pkcs.PKCS8Key;
+import sun.security.util.DerInputStream;
+import sun.security.util.DerValue;
 import sun.security.x509.AlgorithmId;
 
 /*
- * An ML-KEM private key for the NIST FIPS 203 Algorithm.
+ * A PQC private key for the NIST FIPS 203 Algorithm.
  */
 @SuppressWarnings("restriction")
-final class MLKEMPrivateKey extends PKCS8Key {
+final class PQCPrivateKey extends PKCS8Key {
 
-    private static final long serialVersionUID = -358600541133686399L; // TODO
+    private static final long serialVersionUID = 4356472124L; // TODO
 
     private OpenJCEPlusProvider provider = null;
-    private byte[] keyE = null;
-    OCKMLKEMKey mlkemKey;
+    private final byte[] rawKey;
+    private final String name;
+
+    OCKPQCKey pqcKey;
 
     private transient boolean destroyed = false;
 
     /**
      * Create a MLKEM private key from the parameters and key data.
      *
-     * @param rawkeyE
-     *                the public key bytes used in encapsulate a secert key can be
-     *                null;
-     * @param rawkeyD
+     * @param keyBytes
      *                the private key bytes used to decapsulate a secret key
      */
-    public MLKEMPrivateKey(AlgorithmId algId, OpenJCEPlusProvider provider, byte[] rawkeyE, byte[] rawkeyD)
+    public PQCPrivateKey(OpenJCEPlusProvider provider, byte[] keyBytes, String algName)
             throws InvalidKeyException {
 
-        this.algid = algId;
-        this.keyE = rawkeyE;
-        this.key = rawkeyD;
+        this.algid = new AlgorithmId(PQCAlgorithmId.getOID(algName));
+        this.rawKey = keyBytes;
+        this.name = algName;
         this.provider = provider;
+
+        DerValue val = new DerValue(DerValue.tag_OctetString, keyBytes);
+
+        try {
+            this.key = val.toByteArray();
+        } finally {
+            val.clear();
+        }
 
         try {
             // Currently the ICC expects the raw keys.
-            mlkemKey = OCKMLKEMKey.createPrivateKey(provider.getOCKContext(), algid.getName(), this.key);
+            pqcKey = OCKPQCKey.createPrivateKey(provider.getOCKContext(), algName, this.key);
         } catch (Exception exception) {
             InvalidKeyException ike = new InvalidKeyException("Failed to create ML-KEM private key");
             provider.setOCKExceptionCause(ike, exception);
@@ -63,31 +74,49 @@ final class MLKEMPrivateKey extends PKCS8Key {
      * @param encoded
      *                the encoded parameters.
      */
-    public MLKEMPrivateKey(OpenJCEPlusProvider provider, OCKMLKEMKey ockKey) throws InvalidKeyException {
+    public PQCPrivateKey(OpenJCEPlusProvider provider, OCKPQCKey ockKey) throws InvalidKeyException {
         try {
             this.provider = provider;
-            this.mlkemKey = ockKey;
-            this.key = mlkemKey.getPrivateKeyBytes();
+            this.pqcKey = ockKey;
+            this.rawKey = ockKey.getPrivateKeyBytes();
+            this.name = ockKey.getAlgorithm();
+
+            // This needs to be checked. We want to use PKCS8 keys with OCKC. Check if we need to do this.
+            DerValue val = new DerValue(DerValue.tag_OctetString, this.rawKey);
+
+            try {
+                this.key = val.toByteArray();
+            } finally {
+                val.clear();
+            }
         } catch (Exception exception) {
-            throw provider.providerException("Failure in MLKEMPrivateKey", exception);
+            throw provider.providerException("Failure in PQCPrivateKey", exception);
         }
     }
 
     /**
-     * Create a ML_KEM private key from it's DER encoding (PKCS#8)
+     * Create a private key from it's DER encoding (PKCS#8)
      *
      * @param encoded
      *                the encoded parameters.
      */
-    public MLKEMPrivateKey(OpenJCEPlusProvider provider, byte[] encoded) throws InvalidKeyException {
+    public PQCPrivateKey(OpenJCEPlusProvider provider, byte[] encoded) throws InvalidKeyException {
         super(encoded);
         this.provider = provider;
 
         try {
+            rawKey = new DerInputStream(key).getOctetString();
+        } catch (IOException e) {
+            throw new InvalidKeyException("Cannot parse input", e);
+        }
+        
+        this.name = this.algid.getName();
+
+        try {
             // Currently the ICC expects the raw keys.
-            this.mlkemKey = OCKMLKEMKey.createPrivateKey(provider.getOCKContext(), this.algid.getName(), this.key);
+            this.pqcKey = OCKPQCKey.createPrivateKey(provider.getOCKContext(), this.algid.getName(), this.key);
         } catch (Exception exception) {
-            InvalidKeyException ike = new InvalidKeyException("Failed to create DSA private key",
+            InvalidKeyException ike = new InvalidKeyException("Failed to create PQC private key",
                     exception);
             provider.setOCKExceptionCause(ike, exception);
             throw ike;
@@ -97,7 +126,7 @@ final class MLKEMPrivateKey extends PKCS8Key {
     @Override
     public String getAlgorithm() {
         checkDestroyed();
-        return super.getAlgorithm();
+        return name;
     }
 
     @Override
@@ -106,8 +135,8 @@ final class MLKEMPrivateKey extends PKCS8Key {
         return super.getEncoded();
     }
 
-    OCKMLKEMKey getOCKKey() {
-        return this.mlkemKey;
+    OCKPQCKey getOCKKey() {
+        return this.pqcKey;
     }
 
     /**
@@ -123,10 +152,10 @@ final class MLKEMPrivateKey extends PKCS8Key {
         if (!destroyed) {
             destroyed = true;
             if (this.key != null) {
-                Arrays.fill(this.key, (byte) 0x00);
+                Arrays.fill(this.rawKey, (byte) 0x00);
             }
-            this.mlkemKey = null;
-            this.keyE = null;
+            this.pqcKey = null;
+            this.rawKey = null;
         }
     }
 

@@ -8,33 +8,36 @@
 
 package com.ibm.crypto.plus.provider;
 
-import ibm.security.internal.interfaces.MLKEMKey;
+import ibm.security.internal.spec.RawKeySpec;
+
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactorySpi;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
 
-class MLKEMKeyFactory extends KeyFactorySpi {
+class PQCKeyFactory extends KeyFactorySpi {
 
     private OpenJCEPlusProvider provider;
     private String algName = null;
 
-    static MLKEMKey toMLKEMKey(OpenJCEPlusProvider provider, Key key) throws InvalidKeyException {
-        return (MLKEMKey) (new MLKEMKeyFactory(provider, key.getAlgorithm())).engineTranslateKey(key);
+    static Key toPQCKey(OpenJCEPlusProvider provider, Key key) throws InvalidKeyException {
+        return (Key) (new PQCKeyFactory(provider, key.getAlgorithm())).engineTranslateKey(key);
     }
 
-    private MLKEMKeyFactory(OpenJCEPlusProvider provider, String name) {
+    private PQCKeyFactory(OpenJCEPlusProvider provider, String name) {
         this.provider = provider;
         this.algName = name;
     }
 
     /**
-     * Check the strength of an MLKEM key to make sure it is not
+     * Check the strength of an key to make sure it is not
      * too short or long.
      *
      * @param k
@@ -55,13 +58,29 @@ class MLKEMKeyFactory extends KeyFactorySpi {
     protected PrivateKey engineGeneratePrivate(KeySpec keySpec) throws InvalidKeySpecException {
         try {
             if (keySpec instanceof PKCS8EncodedKeySpec) {
-                PrivateKey generated = new MLKEMPrivateKey(provider,
+                PrivateKey generated = new PQCPrivateKey(provider,
                         ((PKCS8EncodedKeySpec) keySpec).getEncoded());
                 checkKeyAlgo(generated);
                 return generated;
+            } else if (keySpec instanceof RawKeySpec) {
+                RawKeySpec rks = RawKeySpec.class.cast(keySpec);
+                byte[] bytes = rks.getKeyArr();
+                try {
+                    return new PQCPrivateKey(provider, bytes, algName);
+                } finally {
+                    Arrays.fill(bytes, (byte) 0);
+                }
+            } else if (keySpec instanceof EncodedKeySpec
+                && ((EncodedKeySpec)keySpec).getFormat().equalsIgnoreCase("RAW")) {
+                byte[] bytes = ((EncodedKeySpec)keySpec).getEncoded();
+                try {
+                    return new PQCPrivateKey(provider, bytes, algName);
+                } finally {
+                    Arrays.fill(bytes, (byte) 0);
+                } 
             } else {
                 throw new InvalidKeySpecException("Inappropriate key specification");
-            }
+            }      
         } catch (InvalidKeyException e) {
             throw new InvalidKeySpecException("Inappropriate key specification: " + e.getMessage());
         }
@@ -72,10 +91,26 @@ class MLKEMKeyFactory extends KeyFactorySpi {
         try {
 
             if (keySpec instanceof X509EncodedKeySpec) {
-                MLKEMPublicKey generated = new MLKEMPublicKey(provider,
+                PQCPublicKey generated = new PQCPublicKey(provider,
                         ((X509EncodedKeySpec) keySpec).getEncoded());
                 checkKeyAlgo(generated);
                 return generated;
+            } else if (keySpec instanceof RawKeySpec) {
+                RawKeySpec rks = RawKeySpec.class.cast(keySpec);
+                byte[] bytes = rks.getKeyArr();
+                try {
+                    return new PQCPublicKey(provider, bytes, algName);
+                } finally {
+                    Arrays.fill(bytes, (byte) 0);
+                }
+            } else if (keySpec instanceof EncodedKeySpec
+                    && ((EncodedKeySpec)keySpec).getFormat().equalsIgnoreCase("RAW")) {
+                    byte[] bytes = ((EncodedKeySpec)keySpec).getEncoded();
+                    try {
+                        return new PQCPublicKey(provider, bytes, algName);
+                    } finally {
+                        Arrays.fill(bytes, (byte) 0);
+                    }
             } else {
                 throw new InvalidKeySpecException("Inappropriate key specification");
             }
@@ -88,7 +123,7 @@ class MLKEMKeyFactory extends KeyFactorySpi {
     protected <T extends KeySpec> T engineGetKeySpec(Key key, Class<T> keySpec)
             throws InvalidKeySpecException {
         try {
-            if (key instanceof com.ibm.crypto.plus.provider.MLKEMPublicKey) {
+            if (key instanceof com.ibm.crypto.plus.provider.PQCPublicKey) {
                 // Determine valid key specs
                 Class<?> x509KeySpec = Class.forName("java.security.spec.X509EncodedKeySpec");
 
@@ -97,7 +132,7 @@ class MLKEMKeyFactory extends KeyFactorySpi {
                 } else {
                     throw new InvalidKeySpecException("Inappropriate key specification");
                 }
-            } else if (key instanceof com.ibm.crypto.plus.provider.MLKEMPrivateKey) {
+            } else if (key instanceof com.ibm.crypto.plus.provider.PQCPrivateKey) {
                 // Determine valid key specs
                 Class<?> pkcs8KeySpec = Class.forName("java.security.spec.PKCS8EncodedKeySpec");
 
@@ -127,7 +162,7 @@ class MLKEMKeyFactory extends KeyFactorySpi {
         try {
             if (key instanceof java.security.PublicKey) {
                 // Check if key originates from this factory
-                if (key instanceof com.ibm.crypto.plus.provider.MLKEMPublicKey) {
+            if (key instanceof com.ibm.crypto.plus.provider.PQCPublicKey) {
                     return key;
                 }
                 // Convert key to spec
@@ -135,9 +170,9 @@ class MLKEMKeyFactory extends KeyFactorySpi {
                         X509EncodedKeySpec.class);
                 // Create key from spec, and return it
                 return engineGeneratePublic(x509KeySpec);
-            } else if (key instanceof com.ibm.crypto.plus.provider.MLKEMPrivateKey) {
+            } else if (key instanceof com.ibm.crypto.plus.provider.PQCPrivateKey) {
                 // Check if key originates from this factory
-                if (key instanceof com.ibm.crypto.plus.provider.MLKEMPrivateKey) {
+                if (key instanceof com.ibm.crypto.plus.provider.PQCPrivateKey) {
                     return key;
                 }
                 // Convert key to spec
@@ -165,24 +200,114 @@ class MLKEMKeyFactory extends KeyFactorySpi {
 
     }
 
-    public static final class MLKEM512 extends MLKEMKeyFactory {
+    public static final class MLKEM512 extends PQCKeyFactory {
 
         public MLKEM512(OpenJCEPlusProvider provider) {
             super(provider, "ML-KEM-512");
         }
     }
 
-    public static final class MLKEM786 extends MLKEMKeyFactory {
+    public static final class MLKEM786 extends PQCKeyFactory {
 
         public MLKEM786(OpenJCEPlusProvider provider) {
             super(provider, "ML-KEM-786");
         }
     }
 
-    public static final class MLKEM1024 extends MLKEMKeyFactory {
+    public static final class MLKEM1024 extends PQCKeyFactory {
 
         public MLKEM1024(OpenJCEPlusProvider provider) {
             super(provider, "ML-KEM-1024");
+        }
+    }
+    public static final class MLDSA44 extends PQCKeyFactory {
+
+        public MLDSA44(OpenJCEPlusProvider provider) {
+            super(provider, "ML-DSA-44");
+        }
+    }
+    public static final class MLDSA65 extends PQCKeyFactory {
+
+        public MLDSA65(OpenJCEPlusProvider provider) {
+            super(provider, "ML-DSA-65");
+        }
+    }
+    public static final class MLDSA87 extends PQCKeyFactory {
+
+        public MLDSA87(OpenJCEPlusProvider provider) {
+            super(provider, "ML-DSA-87");
+        }
+    }
+    public static final class SLHDSASHA2128s extends PQCKeyFactory {
+
+        public SLHDSASHA2128s(OpenJCEPlusProvider provider) {
+            super(provider, "SLH-DSA-SHA2-128s");
+        }
+    }
+    public static final class SLHDSASHAKE128s extends PQCKeyFactory {
+
+        public SLHDSASHAKE128s(OpenJCEPlusProvider provider) {
+            super(provider, "SLH-DSA-SHAKE-128s");
+        }
+    }
+    public static final class SLHDSASHA2128f extends PQCKeyFactory {
+
+        public SLHDSASHA2128f(OpenJCEPlusProvider provider) {
+            super(provider, "SLH-DSA-SHA2-128f");
+        }
+    }
+    public static final class SLHDSASHAKE128f extends PQCKeyFactory {
+
+        public SLHDSASHAKE128f(OpenJCEPlusProvider provider) {
+            super(provider, "SLH-DSA-SHAKE-128f");
+        }
+    }
+    public static final class SLHDSASHA2192s extends PQCKeyFactory {
+
+        public SLHDSASHA2192s(OpenJCEPlusProvider provider) {
+            super(provider, "SLH-DSA-SHA2-192s");
+        }
+    }
+    public static final class SLHDSASHAKE192s extends PQCKeyFactory {
+
+        public SLHDSASHAKE192s(OpenJCEPlusProvider provider) {
+            super(provider, "SLH-DSA-SHAKE-192s");
+        }
+    }
+    public static final class SLHDSASHA2192f extends PQCKeyFactory {
+
+        public SLHDSASHA2192f(OpenJCEPlusProvider provider) {
+            super(provider, "SLH-DSA-SHA2-192f");
+        }
+    }
+    public static final class SLHDSASHAKE192f extends PQCKeyFactory {
+
+        public SLHDSASHAKE192f(OpenJCEPlusProvider provider) {
+            super(provider, "SLH-DSA-SHAKE-192f");
+        }
+    }
+    public static final class SLHDSASHA2256s extends PQCKeyFactory {
+
+        public SLHDSASHA2256s(OpenJCEPlusProvider provider) {
+            super(provider, "SLH-DSA-SHA2-256s");
+        }
+    }
+    public static final class SLHDSASHAKE256s extends PQCKeyFactory {
+
+        public SLHDSASHAKE256s(OpenJCEPlusProvider provider) {
+            super(provider, "SLH-DSA-SHAKE-256s");
+        }
+    }
+    public static final class SLHDSASHA2256f extends PQCKeyFactory {
+
+        public SLHDSASHA2256f(OpenJCEPlusProvider provider) {
+            super(provider, "SLH-DSA-SHA2-256f");
+        }
+    }
+    public static final class SLHDSASHAKE256f extends PQCKeyFactory {
+
+        public SLHDSASHAKE256f(OpenJCEPlusProvider provider) {
+            super(provider, "SLH-DSA-SHAKE-256f");
         }
     }
 }
