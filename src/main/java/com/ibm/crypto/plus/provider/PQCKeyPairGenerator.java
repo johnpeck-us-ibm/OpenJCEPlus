@@ -40,8 +40,6 @@ abstract class PQCKeyPairGenerator extends KeyPairGeneratorSpi {
     @Override
     public void initialize(int keysize, SecureRandom random) {
         if (keysize != -1) {
-            // User can call initialize(-1, sr) to provide a SecureRandom
-            // without touching the parameter set currently used
             throw new InvalidParameterException("keysize not supported");
         }
         // This functions is here for compatablity with Oracle and Spi
