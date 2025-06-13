@@ -40,7 +40,6 @@ public final class PQCKey implements AsymmetricKey {
             }    
         } catch (Exception e) {
             System.out.println("exception = " + e.getMessage());
-            e.printStackTrace();
             throw new OCKException("PQCKey.generateKeyPair: Exception " + e.getCause());
         }
         return new PQCKey(ockContext, keyId, unobtainedKeyBytes, unobtainedKeyBytes, algName);
