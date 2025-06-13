@@ -73,7 +73,7 @@ Java_com_ibm_crypto_plus_provider_ock_NativeInterface_MLKEY_1generate(
 #endif
         printf("algoChars = %s\n", algoChars);
         throwOCKException(env, 0,
-                          "Key generation failed - ICC_OBJ_txt2nid");
+                          "Key generation failed - ICC_OBJ_txt2nid- %s", algoChars);
         return 0;
     }
     printf("After ICC_OBJ_txt2nid\n");
