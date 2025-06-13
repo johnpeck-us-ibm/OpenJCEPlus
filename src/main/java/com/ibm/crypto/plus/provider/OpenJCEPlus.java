@@ -291,8 +291,7 @@ public final class OpenJCEPlus extends OpenJCEPlusProvider {
         putService(new OpenJCEPlusService(jce, "KeyFactory", "RSAPSS",
                 "com.ibm.crypto.plus.provider.RSAKeyFactory$PSS", aliases));
 
-        //PQC is not working on Mac x86 so not registering these.        
-        if (!(osName.equals("Mac OS X") && osArch.equals("x86_64"))) {
+
             // PQC Algorithms
             aliases = new String[] {"ML_KEM_512", "MLKEM512", "2.16.840.1.101.3.4.4.1"};
 
@@ -323,7 +322,7 @@ public final class OpenJCEPlus extends OpenJCEPlusProvider {
 
             putService(new OpenJCEPlusService(jce, "KeyFactory", "ML-DSA-87",
                    "com.ibm.crypto.plus.provider.PQCKeyFactory$MLDSA87", aliases));
-        }                
+                        
         
         /* =======================================================================
          * Key Generator engines
@@ -478,8 +477,7 @@ public final class OpenJCEPlus extends OpenJCEPlusProvider {
                 "com.ibm.crypto.plus.provider.RSAKeyPairGenerator$PSS", aliases));
 
                 
-        //PQC is not working on Mac x86 so not registering these.        
-        if (!(osName.equals("Mac OS X") && osArch.equals("x86_64"))) {
+
             // PQC Algorithms
             aliases = new String[] {"ML_KEM_512", "MLKEM512", "2.16.840.1.101.3.4.4.1"};
 
@@ -510,7 +508,7 @@ public final class OpenJCEPlus extends OpenJCEPlusProvider {
 
             putService(new OpenJCEPlusService(jce, "KeyPairGenerator", "ML-DSA-87",
                    "com.ibm.crypto.plus.provider.PQCKeyPairGenerator$MLDSA87", aliases)); 
-        }         
+                 
 
         /* =======================================================================
          * Message authentication engines
@@ -653,8 +651,7 @@ public final class OpenJCEPlus extends OpenJCEPlusProvider {
         putService(new OpenJCEPlusService(jce, "MessageDigest", "SHA3-512",
                 "com.ibm.crypto.plus.provider.MessageDigest$SHA3_512", aliases));
 
-        //PQC is not working on Mac x86 so not registering these.        
-        if (!(osName.equals("Mac OS X") && osArch.equals("x86_64"))) {
+
             /* =======================================================================
              * Key Encapsulation Mechanisms
              * =======================================================================
@@ -673,7 +670,7 @@ public final class OpenJCEPlus extends OpenJCEPlusProvider {
 
             putService(new OpenJCEPlusService(jce, "KEM", "ML-KEM-1024",
                    "com.ibm.crypto.plus.provider.MLKEMImpl$MLKEM1024", aliases));
-        }        
+                
 
         /* =======================================================================
          * Secret key factories
@@ -907,8 +904,6 @@ public final class OpenJCEPlus extends OpenJCEPlusProvider {
                 "com.ibm.crypto.plus.provider.EdDSASignature$Ed448", aliases));
         
                 
-        //PQC is not working on Mac x86 so not registering these.        
-        if (!(osName.equals("Mac OS X") && osArch.equals("x86_64"))) {
             // PQC Algorithms        
             aliases = new String[] {"ML_DSA_44", "MLDSA44", "2.16.840.1.101.3.4.3.17"};
 
@@ -924,7 +919,7 @@ public final class OpenJCEPlus extends OpenJCEPlusProvider {
 
             putService(new OpenJCEPlusService(jce, "Signature", "ML-DSA-87",
                    "com.ibm.crypto.plus.provider.PQCSignatureImpl$MLDSA87", aliases));
-        }                  
+                          
     }
 
     private static class OpenJCEPlusService extends Service {
