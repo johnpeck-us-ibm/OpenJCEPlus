@@ -71,12 +71,12 @@ Java_com_ibm_crypto_plus_provider_ock_NativeInterface_MLKEY_1generate(
             gslogMessage("ICC_OBJ_txt2nid failed- %s", algoChars);
         }
 #endif
-        printf("algoChars = %s\n", algoChars);
+        gslogMessage("algoChars = %s\n", algoChars);
         throwOCKException(env, 0,
-                          "Key generation failed - ICC_OBJ_txt2nid- %s", algoChars);
+                          "Key generation failed - ICC_OBJ_txt2nid");
         return 0;
     }
-    printf("After ICC_OBJ_txt2nid\n");
+    printf("Before ICC_OBJ_txt2nid\n");
     evp_sp = ICC_EVP_PKEY_CTX_new_from_name(ockCtx, NULL, algoChars, NULL);
     if (!evp_sp) {
         evp_sp = ICC_EVP_PKEY_CTX_new_id(ockCtx, nid, NULL);
