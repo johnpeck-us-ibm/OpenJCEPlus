@@ -36,10 +36,11 @@ public final class PQCKey implements AsymmetricKey {
             keyId = NativeInterface.MLKEY_generate(ockContext.getId(), NoDashAlg);
 
             if (keyId == 0) {   
-                throw new OCKException("OCKPQCKey.generateKeyPair: MLKEY_generate failed");
+                throw new OCKException("PQCKey.generateKeyPair: MLKEY_generate failed");
             }    
         } catch (Exception e) {
-            throw new OCKException("OCKPQCKey.generateKeyPair: Exception " + e.getCause());
+            System.out.println("exception = " + e.getMessage + e.printStackTrace);
+            throw new OCKException("PQCKey.generateKeyPair: Exception " + e.getCause());
         }
         return new PQCKey(ockContext, keyId, unobtainedKeyBytes, unobtainedKeyBytes, algName);
     }
