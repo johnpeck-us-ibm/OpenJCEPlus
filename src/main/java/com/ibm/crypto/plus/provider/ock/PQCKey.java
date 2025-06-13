@@ -39,7 +39,8 @@ public final class PQCKey implements AsymmetricKey {
                 throw new OCKException("PQCKey.generateKeyPair: MLKEY_generate failed");
             }    
         } catch (Exception e) {
-            System.out.println("exception = " + e.getMessage + e.printStackTrace);
+            System.out.println("exception = " + e.getMessage());
+            e.printStackTrace();
             throw new OCKException("PQCKey.generateKeyPair: Exception " + e.getCause());
         }
         return new PQCKey(ockContext, keyId, unobtainedKeyBytes, unobtainedKeyBytes, algName);
