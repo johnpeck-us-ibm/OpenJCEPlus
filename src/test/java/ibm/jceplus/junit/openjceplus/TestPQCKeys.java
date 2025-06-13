@@ -18,7 +18,6 @@ import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.condition.OS;
 
 @TestInstance(Lifecycle.PER_CLASS)
-@DisabledOnOs(value = OS.MAC, architectures = "x86_64")
 @EnabledForJreRange(min = JRE.JAVA_17)
 public class TestPQCKeys extends BaseTestPQCKeys {
 
