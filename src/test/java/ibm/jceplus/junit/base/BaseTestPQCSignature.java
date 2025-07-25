@@ -19,7 +19,9 @@ public class BaseTestPQCSignature extends BaseTestJunit5Signature {
     static final byte[] origMsg = "this is the original message to be signed".getBytes();
 
     @ParameterizedTest
-    @CsvSource({"ML_DSA_44","ML-DSA-65","ML_DSA_87"})
+    @CsvSource({"ML_DSA_44","ML-DSA-65","ML_DSA_87",
+        "SLH-DSA-SHA2-128s", "SLH-DSA-SHA2-128f","SLH-DSA-SHA2-192s", "SLH-DSA-SHA2-192f","SLH-DSA-SHA2-256s", "SLH-DSA-SHA2-256f",
+        "SLH-DSA-SHAKE-128s", "SLH-DSA-SHAKE-128f","SLH-DSA-SHAKE-192s", "SLH-DSA-SHAKE-192f","SLH-DSA-SHAKE-256s", "SLH-DSA-SHAKE-256f"})
     public void testPQCKeySignature(String Algorithm) throws Exception {
 
         if (getProviderName().equals("OpenJCEPlusFIPS")) {

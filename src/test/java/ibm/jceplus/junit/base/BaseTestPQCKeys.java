@@ -44,7 +44,9 @@ public class BaseTestPQCKeys extends BaseTestJunit5 {
     @ParameterizedTest
     @CsvSource({"MLKEM512", "ML_KEM_768",
         "ML-KEM-1024", "ML_KEM_512", "ML_KEM_768", "ML_KEM_1024",
-        "ML_DSA_44","ML_DSA_65","ML-DSA-87"})
+        "ML_DSA_44","ML_DSA_65","ML-DSA-87",
+        "SLH-DSA-SHA2-128s", "SLH-DSA-SHA2-128f","SLH-DSA-SHA2-192s", "SLH-DSA-SHA2-192f","SLH-DSA-SHA2-256s", "SLH-DSA-SHA2-256f",
+        "SLH-DSA-SHAKE-128s", "SLH-DSA-SHAKE-128f","SLH_DSA_SHAKE_192s", "SLH-DSA-SHAKE-192f","SLH-DSA-SHAKE-256s", "SLH-DSA-SHAKE-256f"})
     public void testPQCKeyGen(String Algorithm) throws Exception {
         if (getProviderName().equals("OpenJCEPlusFIPS")) {
             //FIPS does not support PQC keys currently
@@ -63,7 +65,9 @@ public class BaseTestPQCKeys extends BaseTestJunit5 {
     @ParameterizedTest
     @CsvSource({"ML-KEM-512", "ML-KEM-768",
         "ML-KEM-1024",
-        "ML_DSA_44","ML_DSA_65","ML-DSA-87"})
+        "ML_DSA_44","ML_DSA_65","ML-DSA-87",
+        "SLH-DSA-SHA2-128s", "SLH-DSA-SHA2-128f","SLH-DSA-SHA2-192s", "SLH-DSA-SHA2-192f","SLH-DSA-SHA2-256s", "SLH-DSA-SHA2-256f",
+        "SLH-DSA-SHAKE-128s", "SLH-DSA-SHAKE-128f","SLH_DSA_SHAKE_192s", "SLH-DSA-SHAKE-192f","SLH-DSA-SHAKE-256s", "SLH-DSA-SHAKE-256f"})
     public void testPQCKeyFactoryCreateFromEncoded(String Algorithm) throws Exception {
         if (getProviderName().equals("OpenJCEPlusFIPS")) {
             //FIPS does not support PQC keys currently
