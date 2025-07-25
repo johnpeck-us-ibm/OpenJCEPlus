@@ -364,7 +364,10 @@ final class NativeInterface {
 
     static public native long checkHardwareSupport(long ockContextId);
 
-    static public native void CIPHER_delete(long ockContextId, long ockCipherId)
+    static public native void CIPHER_KeyWraporUnwrap(long ockContextId, byte[] key, byte [] outputBuffer, byte [] KEK)
+            throws OCKException;
+
+    static public native void CIPHER_AESKEYWRAPUNWRAP(long ockContextId, long ockCipherId)
             throws OCKException;
 
     static public native int z_kmc_native(byte[] input, int inputOffset, byte[] output,
