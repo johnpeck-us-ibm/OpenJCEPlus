@@ -17,6 +17,7 @@ import sun.security.pkcs.PKCS8Key;
 import sun.security.util.DerOutputStream;
 import sun.security.util.DerValue;
 import sun.security.x509.AlgorithmId;
+import sun.security.x509.X509Key;
 
 /*
  * A PQC private key for the NIST FIPS 203 Algorithm.
@@ -28,6 +29,7 @@ final class PQCPrivateKey extends PKCS8Key {
 
     private OpenJCEPlusProvider provider = null;
     private final String name;
+    private byte[] attributes = null;
 
     private transient PQCKey pqcKey;
 
@@ -83,22 +85,28 @@ final class PQCPrivateKey extends PKCS8Key {
             this.provider = provider;
             this.pqcKey = pqcKey;
 
-            //Check to determine if the key bytes have the Octet tag.
-            if (OctectStringEncoded(pqcKey.getPrivateKeyBytes())) {
-                this.privKeyMaterial = pqcKey.getPrivateKeyBytes();
-            } else {
-                DerValue pkOct = null;
-                try {
-                    pkOct = new DerValue(DerValue.tag_OctetString, pqcKey.getPrivateKeyBytes());
-
-                    this.privKeyMaterial = pkOct.toByteArray();
-                } finally {
-                    pkOct.clear();
-                }
-            }
-
             this.name = pqcKey.getAlgorithm();
             this.algid = new AlgorithmId(PQCAlgorithmId.getOID(name));
+
+            if (!(this.name.startsWith("SLH-DSA"))) {
+               //Check to determine if the key bytes have the Octet tag.
+               if (OctectStringEncoded(pqcKey.getPrivateKeyBytes())) {
+                    this.privKeyMaterial = pqcKey.getPrivateKeyBytes();
+                } else {
+                    DerValue pkOct = null;
+                    try {
+                        pkOct = new DerValue(DerValue.tag_OctetString, pqcKey.getPrivateKeyBytes());
+
+                        this.privKeyMaterial = pkOct.toByteArray();
+                    } finally {
+                        pkOct.clear();
+                    }
+                }
+            } else {
+                //Extract the private key info from the generated key.
+                decode(new DerValue(pqcKey.getPrivateKeyBytes()));
+            }
+
         } catch (Exception exception) {
             throw provider.providerException("Failure in PQCPrivateKey" + exception.getMessage(), exception);
         }
@@ -111,34 +119,117 @@ final class PQCPrivateKey extends PKCS8Key {
      *                the encoded parameters.
      */
     public PQCPrivateKey(OpenJCEPlusProvider provider, byte[] encoded) throws InvalidKeyException {
-        super(encoded);
+        //super(encoded);
+        try {
+            decode(new DerValue(encoded));
+        } catch (Exception e) {
+            throw new InvalidKeyException("Invalid key " + e.getMessage(), e);
+        }
         this.provider = provider;
 
         this.name = PQCKnownOIDs.findMatch(this.algid.getName()).stdName();
+        
+        if (!(this.name.startsWith("SLH-DSA"))) {
+            //Check to determine if the key bytes have the Octet tag.      
+            if (!(OctectStringEncoded(this.privKeyMaterial))) {
+                DerValue pkOct = null;
+                try {
+                    pkOct = new DerValue(DerValue.tag_OctetString, this.privKeyMaterial);
 
-        //Check to determine if the key bytes have the Octet tag.
-        if (!(OctectStringEncoded(this.privKeyMaterial))) {
-            DerValue pkOct = null;
-            try {
-                pkOct = new DerValue(DerValue.tag_OctetString, this.privKeyMaterial);
-
-                this.privKeyMaterial = pkOct.toByteArray();
-            } finally {
-                pkOct.clear();
+                    this.privKeyMaterial = pkOct.toByteArray();
+                } finally {
+                    pkOct.clear();
+                }
             }
-        }
-        try {
-            this.pqcKey = PQCKey.createPrivateKey(provider.getOCKContext(), 
+            try {
+                this.pqcKey = PQCKey.createPrivateKey(provider.getOCKContext(), 
                                    this.name, this.privKeyMaterial);
-        } catch (Exception e) {
-            throw new InvalidKeyException("Invalid key " + e.getMessage(), e);
-        }   
+            } catch (Exception e) {
+                throw new InvalidKeyException("Invalid key " + e.getMessage(), e);
+            }  
+        } else {
+            try {
+                this.pqcKey = PQCKey.createPrivateKey(provider.getOCKContext(), 
+                                   this.name, getEncoded());
+            } catch (Exception e) {
+                throw new InvalidKeyException("Invalid key " + e.getMessage(), e);
+            }  
+        }
     }
 
     @Override
     public String getAlgorithm() {
         checkDestroyed();
         return name;
+    }
+
+    private void decode(DerValue val) throws InvalidKeyException {
+        /*
+        *     OneAsymmetricKey ::= SEQUENCE {
+        *        version                   Version,
+        *        privateKeyAlgorithm       PrivateKeyAlgorithmIdentifier,
+        *        privateKey                PrivateKey,
+        *        attributes            [0] Attributes OPTIONAL,
+        *        ...,
+        *        [[2: publicKey        [1] PublicKey OPTIONAL ]],
+        *        ...
+        *      }
+        */
+        try {
+            if (val.tag != DerValue.tag_Sequence) {
+                throw new InvalidKeyException("invalid key format");
+            }
+
+            // Support check for V1, aka 0, and V2, aka 1.
+            int ver = val.data.getInteger();
+            if (ver != 0 && ver != 1) {
+                throw new InvalidKeyException("unknown version: " + ver);
+            }
+            // Parse and store AlgorithmID
+            algid = AlgorithmId.parse(val.data.getDerValue());
+
+            // Store key material for subclasses to parse
+            this.privKeyMaterial = val.data.getOctetString();
+
+            // v1 typically ends here
+            if (val.data.available() == 0) {
+                return;
+            }
+
+            // OPTIONAL Context tag 0 for Attributes
+            // Uses 0xA0 context-specific/constructed or 0x80
+            // context-specific/primitive.
+            DerValue v = val.data.getDerValue();
+            if (v.isContextSpecific((byte)0)) {
+                attributes = v.getDataBytes(); 
+                if (val.data.available() == 0) {
+                    return;
+                }
+                v = val.data.getDerValue();
+            }
+
+            // OPTIONAL context tag 1 for Public Key
+            if (ver == 1) {
+                if (v.isContextSpecific((byte)1)) {
+                    DerValue bits = v.withTag(DerValue.tag_BitString);
+                    this.pubKeyEncoded = new X509Key(algid,
+                        bits.getUnalignedBitString()).getEncoded();
+                } else {
+                    throw new InvalidKeyException("Invalid context tag");
+                }
+                if (val.data.available() == 0) {
+                    return;
+                }
+            }
+
+            throw new InvalidKeyException("Extra bytes");
+        } catch (IOException e) {
+            throw new InvalidKeyException("Unable to decode key", e);
+        } finally {
+            if (val != null) {
+                val.clear();
+            }
+        }
     }
 
     @Override
@@ -169,7 +260,6 @@ final class PQCPrivateKey extends PKCS8Key {
             tmp.close();
             bytes.close();
         } catch (IOException ex) {
-            //System.out.println("Exception creating encoding - "+ex.getMessage());
             return encodedKey;
         }
         

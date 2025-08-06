@@ -15,6 +15,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGeneratorSpi;
 import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
+import java.util.HexFormat;
 
 abstract class PQCKeyPairGenerator extends KeyPairGeneratorSpi {
 
@@ -52,7 +53,6 @@ abstract class PQCKeyPairGenerator extends KeyPairGeneratorSpi {
     @Override
     public KeyPair generateKeyPair() {
         try {
-            //System.out.println("Generating KeyPair for " + mlkemAlg);
             PQCKey mlkemKey = PQCKey.generateKeyPair(provider.getOCKContext(), mlkemAlg);
             byte [] privKeyBytes = mlkemKey.getPrivateKeyBytes();
             PQCPrivateKey privKey = new PQCPrivateKey(provider, PQCKey.createPrivateKey(provider.getOCKContext(), 

@@ -40,8 +40,8 @@ final class PQCPublicKey extends X509Key
         this.algid = new AlgorithmId(PQCAlgorithmId.getOID(algName));
         this.provider = provider;
         this.name = algName;
-
         setKey(new BitArray(rawKey.length * 8, rawKey));
+
         try {
             // OCKC needs the key with a BitArray encoding to process it as raw.
             DerOutputStream tmp = new DerOutputStream();
@@ -65,8 +65,13 @@ final class PQCPublicKey extends X509Key
 
             this.algid = new AlgorithmId(PQCAlgorithmId.getOID(name));
 
-            //OCKC puts the BITSTRING on the key. Need to remove it.
-            setKey(new BitArray((rawKey.length - 5)*8, rawKey, 5));
+            //OCKC puts the BITSTRING on the key. Need to remove it. Depending
+            // on the encoding size we need to do things differently.
+            if (rawKey[0] == 0x03 && rawKey[1] == -126) {
+                setKey(new BitArray((rawKey.length - 5)*8, rawKey, 5));
+            } else {
+                setKey(new BitArray((rawKey.length - 3)*8, rawKey, 3));
+            }       
 
             this.pqcKey = pqcKey;
         } catch (Exception exception) {
@@ -85,8 +90,8 @@ final class PQCPublicKey extends X509Key
             tmp.putUnalignedBitString(getKey());
             byte [] b = tmp.toByteArray();
             tmp.close();
-            
-            this.pqcKey = PQCKey.createPublicKey(provider.getOCKContext(), name, b);
+
+             this.pqcKey = PQCKey.createPublicKey(provider.getOCKContext(), name, b);
                       
         } catch (Exception e) {
             throw provider.providerException("Failure in PublicKey -"+e.getMessage(), e);
@@ -129,7 +134,6 @@ final class PQCPublicKey extends X509Key
             tmp.close();
             bytes.close();
         } catch (IOException ex) {
-            //System.out.println("Exception creating encoding - "+ex.getMessage());
             return encodedKey;
         }
         return encodedKey;

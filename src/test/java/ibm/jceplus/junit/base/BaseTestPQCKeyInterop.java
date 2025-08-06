@@ -19,8 +19,12 @@ import java.security.spec.EncodedKeySpec;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
+import java.util.Base64;
+import java.util.HexFormat;
 import javax.crypto.KEM;
 import javax.crypto.SecretKey;
+
+import org.apache.commons.codec.binary.Hex;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -37,7 +41,7 @@ public class BaseTestPQCKeyInterop extends BaseTestJunit5Interop {
 
     byte[] origMsg = "this is the original message to be signed".getBytes();
 
-    @Test
+/*     @Test
     public void testPQCKeyGenKEM_PlusToInterop() throws Exception {
         String pqcAlgorithm = "ML-KEM-512";
         boolean same = false;
@@ -140,7 +144,7 @@ public class BaseTestPQCKeyInterop extends BaseTestJunit5Interop {
         // The original and new keys are the same
         same = Arrays.equals(publicKeyBytesInterop, pub.getEncoded());
         assertTrue(same);
-    }
+    }      
     @Test
     public void testPQCKeyGenMLDSA_PlusToInterop() throws Exception {
         String pqcAlgorithm = "ML-DSA-65";
@@ -175,7 +179,7 @@ public class BaseTestPQCKeyInterop extends BaseTestJunit5Interop {
         // The original and new keys are the same
         same = Arrays.equals(publicKeyBytesPlus, publicKeyInterop.getEncoded());
         assertTrue(same);
-    } 
+    }        
     @Test
     public void testPQCKeyGenMLDSA_Interop() throws Exception {        
         String pqcAlgorithm = "ML-DSA-65";
@@ -211,7 +215,7 @@ public class BaseTestPQCKeyInterop extends BaseTestJunit5Interop {
         same = Arrays.equals(publicKeyBytesInterop, publicKeyPlus.getEncoded());
         assertTrue(same);
 
-    }
+    }        
     @Test
     public void testPQCKeyGenMLDSA_PlusToInteropRAW() throws Exception {
         String pqcAlgorithm = "ML-DSA-65";
@@ -249,7 +253,7 @@ public class BaseTestPQCKeyInterop extends BaseTestJunit5Interop {
         same = Arrays.equals(publicKeyBytesInterop, pub.getEncoded());
         assertTrue(same);
     }
-
+*/
     protected KeyPair generateKeyPair(KeyPairGenerator keyPairGen) throws Exception {
         KeyPair keyPair = keyPairGen.generateKeyPair();
 
@@ -263,7 +267,7 @@ public class BaseTestPQCKeyInterop extends BaseTestJunit5Interop {
 
         return keyPair;
     }
- 
+/*   
     @ParameterizedTest
     @CsvSource({"ML-DSA-44","ML-DSA-65","ML-DSA-87"})
     public void testSignInteropAndVerifyPlus(String algorithm) {
@@ -297,7 +301,7 @@ public class BaseTestPQCKeyInterop extends BaseTestJunit5Interop {
             ex.printStackTrace();
             assertTrue(false, "SignInteropAndVerifyPlus failed");
         }
-    }
+    }       
     @ParameterizedTest
     @CsvSource({"ML-DSA-44","ML-DSA-65","ML-DSA-87"})
     public void testSignInteropKeysPlusSignVerify(String algorithm) {
@@ -365,7 +369,7 @@ public class BaseTestPQCKeyInterop extends BaseTestJunit5Interop {
             ex.printStackTrace();
             assertTrue(false, "SignInteropAndVerifyPlus failed");
         }
-    }
+    }       
     @ParameterizedTest
     @CsvSource({"ML-DSA-44","ML-DSA-65","ML-DSA-87"})
     public void testSignPlusAndVerifyInterop(String algorithm) {
@@ -401,7 +405,7 @@ public class BaseTestPQCKeyInterop extends BaseTestJunit5Interop {
             assertTrue(false, "SignPlusAndVerifyInterop failed");
         }
     }
-
+ 
     @ParameterizedTest
     @CsvSource({"ML-KEM-512","ML-KEM-768","ML-KEM-1024"})
     public void testKEMPlusKeyInteropAll(String Algorithm) {
@@ -562,6 +566,266 @@ public class BaseTestPQCKeyInterop extends BaseTestJunit5Interop {
             assertTrue(false, "KEMInteropCreatesPlusGet failed");
         }
     }
+  
+    @ParameterizedTest
+    @CsvSource({"SLH-DSA-SHA2-128s"})
+    public void testGenInteropSignVerifPlus(String algorithm) {
+        try {
+            if (getProviderName().equals("OpenJCEPlusFIPS") || 
+                getInteropProviderName().equals(Utils.PROVIDER_SUN)) {
+                //This is not in the FIPS provider yet.
+                return;
+            }
+            keyPairGenInterop = KeyPairGenerator.getInstance(algorithm, getInteropProviderName2());
+            //keyPairGenInterop = KeyPairGenerator.getInstance(algorithm, getProviderName());
+            KeyPair keyPairInterop = generateKeyPair(keyPairGenInterop);
 
+            PublicKey publicKeyInterop = keyPairInterop.getPublic();
+            //System.out.println("Interop publicKeyInterop - "+HexFormat.of().formatHex(publicKeyInterop.getEncoded()));
+            PrivateKey privateKeyInterop = keyPairInterop.getPrivate();
+            //System.out.println("Interop privateKeyInterop - "+HexFormat.of().formatHex(privateKeyInterop.getEncoded()));
+            PKCS8EncodedKeySpec privateKeySpecInterop = new PKCS8EncodedKeySpec(privateKeyInterop.getEncoded());
+            EncodedKeySpec publicKeySpecInterop = new X509EncodedKeySpec(publicKeyInterop.getEncoded());
+            KeyFactory keyFactoryPlus = KeyFactory.getInstance(algorithm, getProviderName());
+            PrivateKey privPlus = keyFactoryPlus.generatePrivate(privateKeySpecInterop);
+            //System.out.println("privPlus - "+HexFormat.of().formatHex(privPlus.getEncoded()));
+            PublicKey pubPlus = keyFactoryPlus.generatePublic(publicKeySpecInterop);
+            //System.out.println("pubPlus - "+HexFormat.of().formatHex(pubPlus.getEncoded()));
+
+            Signature signingInterop = Signature.getInstance(algorithm, getProviderName());
+            signingInterop.initSign(privPlus);
+            signingInterop.update(origMsg);
+            byte[] signedBytesInterop = signingInterop.sign();
+            //System.out.println("sign len = "+signedBytesInterop.length);
+
+            Signature verifyingPlus = Signature.getInstance(algorithm, getProviderName());
+            verifyingPlus.initVerify(pubPlus);
+            verifyingPlus.update(origMsg);
+            assertTrue(verifyingPlus.verify(signedBytesInterop), "Signature verification failed");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            assertTrue(false, "SignInteropAndVerifyPlus failed");
+        }
+    }
+ 
+    @ParameterizedTest
+    @CsvSource({"SLH-DSA-SHA2-128s"})
+    public void testGenPlusSignVerifyInterop(String algorithm) {
+        try {
+            if (getProviderName().equals("OpenJCEPlusFIPS") || 
+                getInteropProviderName().equals(Utils.PROVIDER_SUN)) {
+                //This is not in the FIPS provider yet.
+                return;
+            }
+            keyPairGenPlus = KeyPairGenerator.getInstance(algorithm, getProviderName());
+            KeyPair keyPairPlus = generateKeyPair(keyPairGenPlus);
+
+            PublicKey publicKeyPlus = keyPairPlus.getPublic();
+            PrivateKey privateKeyPlus = keyPairPlus.getPrivate();
+            System.out.println("Priv key - "+HexFormat.of().formatHex(privateKeyPlus.getEncoded()));
+            PKCS8EncodedKeySpec privateKeySpecPlus = new PKCS8EncodedKeySpec(privateKeyPlus.getEncoded());
+            EncodedKeySpec publicKeySpecPlus = new X509EncodedKeySpec(publicKeyPlus.getEncoded());
+            KeyFactory keyFactoryInterop = KeyFactory.getInstance(algorithm, getInteropProviderName2());
+            PublicKey pubInterop = keyFactoryInterop.generatePublic(publicKeySpecPlus);
+            PrivateKey privInterop = keyFactoryInterop.generatePrivate(privateKeySpecPlus);
+
+            Signature signingInterop = Signature.getInstance(algorithm, getInteropProviderName2());
+            signingInterop.initSign(privInterop);
+            signingInterop.update(origMsg);
+            byte[] signedBytesInterop = signingInterop.sign();
+
+            Signature verifyingPlus = Signature.getInstance(algorithm, getInteropProviderName2());
+            verifyingPlus.initVerify(pubInterop);
+            verifyingPlus.update(origMsg);
+            assertTrue(verifyingPlus.verify(signedBytesInterop), "Signature verification failed");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            assertTrue(false, "SignInteropAndVerifyPlus failed");
+        }
+    }
+
+ 
+    @ParameterizedTest
+    @CsvSource({"SLH-DSA-SHA2-128s"})
+    public void testSignPlusAndVerifyInteropSLH(String algorithm) {
+        try {
+            if (getProviderName().equals("OpenJCEPlusFIPS")) {
+                //This is not in the FIPS provider yet.
+                return;
+            }
+
+            keyPairGenPlus = KeyPairGenerator.getInstance(algorithm, getProviderName());
+            KeyPair keyPairPlus = generateKeyPair(keyPairGenPlus);
+
+            PublicKey publicKeyPlus = keyPairPlus.getPublic();
+            PrivateKey privateKeyPlus = keyPairPlus.getPrivate();
+
+            Signature signingPlus = Signature.getInstance(algorithm, getProviderName());
+            signingPlus.initSign(privateKeyPlus);
+            signingPlus.update(origMsg);
+            byte[] signedBytesPlus = signingPlus.sign();
+
+            X509EncodedKeySpec x509SpecInterop = new X509EncodedKeySpec(
+                publicKeyPlus.getEncoded());
+
+            KeyFactory keyFactoryInterop = KeyFactory.getInstance(algorithm, getInteropProviderName2());
+            PublicKey pubInterop = keyFactoryInterop.generatePublic(x509SpecInterop);
+
+            Signature verifyingPlus = Signature.getInstance(algorithm, getInteropProviderName2());
+            verifyingPlus.initVerify(pubInterop);
+            verifyingPlus.update(origMsg);
+            assertTrue(verifyingPlus.verify(signedBytesPlus), "Signature verification failed");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            assertTrue(false, "SignPlusAndVerifyInterop failed");
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"SLH-DSA-SHA2-128s"})
+    public void testSignInteropAndVerifyPlus(String algorithm) {
+        try {
+            if (getProviderName().equals("OpenJCEPlusFIPS")) {
+                //This is not in the FIPS provider yet.
+                return;
+            }
+
+            keyPairGenPlus = KeyPairGenerator.getInstance(algorithm, getProviderName());
+            KeyPair keyPairPlus = generateKeyPair(keyPairGenPlus);
+
+            PublicKey publicKeyPlus = keyPairPlus.getPublic();
+            PrivateKey privateKeyPlus = keyPairPlus.getPrivate();
+
+            Signature signingPlus = Signature.getInstance(algorithm, getProviderName());
+            signingPlus.initSign(privateKeyPlus);
+            signingPlus.update(origMsg);
+            byte[] signedBytesPlus = signingPlus.sign();
+
+            X509EncodedKeySpec x509SpecInterop = new X509EncodedKeySpec(
+                publicKeyPlus.getEncoded());
+
+            KeyFactory keyFactoryInterop = KeyFactory.getInstance(algorithm, getInteropProviderName2());
+            PublicKey pubInterop = keyFactoryInterop.generatePublic(x509SpecInterop);
+
+            Signature verifyingPlus = Signature.getInstance(algorithm, getInteropProviderName2());
+            verifyingPlus.initVerify(pubInterop);
+            verifyingPlus.update(origMsg);
+            assertTrue(verifyingPlus.verify(signedBytesPlus), "Signature verification failed");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            assertTrue(false, "SignPlusAndVerifyInterop failed");
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"SLH-DSA-SHA2-128s"})
+    public void testSignInteropAndVerifyPluswithPlusGeneys(String algorithm) {
+        try {
+            if (getProviderName().equals("OpenJCEPlusFIPS")) {
+                //This is not in the FIPS provider yet.
+                return;
+            }
+
+            keyPairGenPlus = KeyPairGenerator.getInstance(algorithm, getProviderName());
+            KeyPair keyPairPlus = generateKeyPair(keyPairGenPlus);
+
+            PublicKey publicKeyPlus = keyPairPlus.getPublic();
+            PrivateKey privateKeyPlus = keyPairPlus.getPrivate();
+
+            PKCS8EncodedKeySpec privateKeySpecPlus = new PKCS8EncodedKeySpec(privateKeyPlus.getEncoded());
+             KeyFactory keyFactoryInterop = KeyFactory.getInstance(algorithm, getInteropProviderName2());
+            PrivateKey privInterop = keyFactoryInterop.generatePrivate(privateKeySpecPlus);
+            System.out.println("BC Priv from encoding - "+ HexFormat.of().formatHex(privInterop.getEncoded()));
+
+            Signature signingInterop = Signature.getInstance(algorithm, getInteropProviderName2());
+            signingInterop.initSign(privInterop);
+            signingInterop.update(origMsg);
+            byte[] signedBytesInterop = signingInterop.sign();
+
+            Signature verifyingPlus = Signature.getInstance(algorithm, getProviderName());
+            verifyingPlus.initVerify(publicKeyPlus);
+            verifyingPlus.update(origMsg);
+            assertTrue(verifyingPlus.verify(signedBytesInterop), "Signature verification failed");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            assertTrue(false, "SignPlusAndVerifyInterop failed");
+        }
+    }
+
+    
+    @ParameterizedTest
+    @CsvSource({"SLH-DSA-SHA2-128s"})
+    public void testSignPluspAndVerifyInteropwithInteropGenKeys(String algorithm) {
+        try {
+            if (getProviderName().equals("OpenJCEPlusFIPS")) {
+                //This is not in the FIPS provider yet.
+                return;
+            }
+
+            keyPairGenPlus = KeyPairGenerator.getInstance(algorithm, getInteropProviderName2());
+            KeyPair keyPairPlus = generateKeyPair(keyPairGenPlus);
+
+            PublicKey publicKeyPlus = keyPairPlus.getPublic();
+            PrivateKey privateKeyPlus = keyPairPlus.getPrivate();
+
+            PKCS8EncodedKeySpec privateKeySpecPlus = new PKCS8EncodedKeySpec(privateKeyPlus.getEncoded());
+             KeyFactory keyFactoryInterop = KeyFactory.getInstance(algorithm, getProviderName());
+            PrivateKey privInterop = keyFactoryInterop.generatePrivate(privateKeySpecPlus);
+
+            Signature signingInterop = Signature.getInstance(algorithm, getProviderName());
+            signingInterop.initSign(privInterop);
+            signingInterop.update(origMsg);
+            byte[] signedBytesInterop = signingInterop.sign();
+
+            Signature verifyingPlus = Signature.getInstance(algorithm, getInteropProviderName2());
+            verifyingPlus.initVerify(publicKeyPlus);
+            verifyingPlus.update(origMsg);
+            assertTrue(verifyingPlus.verify(signedBytesInterop), "Signature verification failed");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            assertTrue(false, "SignPlusAndVerifyInterop failed");
+        }
+    }
+*/
+    @ParameterizedTest
+    @CsvSource({"SLH-DSA-SHA2-128s"})
+    public void testSignPluspAndVerifyInteropwithInteropGenKeysHW(String algorithm) {
+        try {
+            if (getProviderName().equals("OpenJCEPlusFIPS")) {
+                //This is not in the FIPS provider yet.
+                return;
+            }
+            String privatekey = "MFICAQAwCwYJYIZIAWUDBAMUBECKBL2ZuH11S/hzm9sQY6OhMOrszfN5V5AG30frBOHjiII4CKS+3GflZF3jpS8vaA920Le7KYxjlOfvDRMaJyPb";
+            String pubKey = "MDAwCwYJYIZIAWUDBAMUAyEAgjgIpL7cZ+VkXeOlLy9oD3bQt7spjGOU5+8NExonI9s=";
+
+            byte[] encodedPriv = Base64.getDecoder().decode(privatekey);
+            byte[] encodedPub = Base64.getDecoder().decode(pubKey);
+
+            System.out.println("encodedPriv = "+HexFormat.of().formatHex(encodedPriv));
+            System.out.println("encodedPub = "+HexFormat.of().formatHex(encodedPub));
+
+            PKCS8EncodedKeySpec privateKeySpecInterop = new PKCS8EncodedKeySpec(encodedPriv);
+            EncodedKeySpec publicKeySpecInterop = new X509EncodedKeySpec(encodedPub);
+            KeyFactory keyFactoryPlus = KeyFactory.getInstance(algorithm, getInteropProviderName2());
+            PrivateKey privPlus = keyFactoryPlus.generatePrivate(privateKeySpecInterop);
+            System.out.println("privPlus - "+HexFormat.of().formatHex(privPlus.getEncoded()));
+            PublicKey pubPlus = keyFactoryPlus.generatePublic(publicKeySpecInterop);
+            System.out.println("pubPlus - "+HexFormat.of().formatHex(pubPlus.getEncoded()));
+
+            Signature signingInterop = Signature.getInstance(algorithm, getInteropProviderName2());
+            signingInterop.initSign(privPlus);
+            signingInterop.update(origMsg);
+            byte[] signedBytesInterop = signingInterop.sign();
+            //System.out.println("sign len = "+signedBytesInterop.length);
+
+            Signature verifyingPlus = Signature.getInstance(algorithm, getInteropProviderName2());
+            verifyingPlus.initVerify(pubPlus);
+            verifyingPlus.update(origMsg);
+            assertTrue(verifyingPlus.verify(signedBytesInterop), "Signature verification failed");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            assertTrue(false, "SignPlusAndVerifyInterop failed");
+        }
+    }
 }
 

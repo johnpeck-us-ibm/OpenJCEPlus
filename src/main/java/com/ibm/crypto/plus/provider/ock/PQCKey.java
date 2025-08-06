@@ -143,7 +143,6 @@ public final class PQCKey implements AsymmetricKey {
                 throw new OCKException(badIdMsg);
             }
         
-            System.out.println("getPrivKeyBytes - pkeyId :" + pkeyId);
             this.privateKeyBytes = NativeInterface.MLKEY_getPrivateKeyBytes(ockContext.getId(),
             pkeyId);
         }
