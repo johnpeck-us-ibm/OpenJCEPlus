@@ -116,6 +116,30 @@ public abstract class OpenJCEPlusProvider extends java.security.Provider {
         }
     }
 
+    protected void LoadStringConfig(String configName) throws InvalidParameterException {
+        if (configName == null) {
+            throw new InvalidParameterException("configName is null");
+        }
+        if (configName.length() == 0) {
+            throw new InvalidParameterException("configName is empty");
+        }
+        if (configName.indexOf('\\') != -1) {
+            throw new InvalidParameterException("configName contains '\\'");
+        }
+        
+        try {
+            ProviderServiceReader config = new ProviderServiceReader(new BufferedReader(new StringReader(configName)));  
+            List<ProviderServiceReader.ServiceDefinition> services = config.readServices();
+            for (ProviderServiceReader.ServiceDefinition service : services) {
+                putService(new OpenJCEPlusService(this, service.getType(), service.getAlgorithm(),
+                    service.getClassName(), service.getAliases().toArray(new String[service.getAliases().size()]), service.getAttributes()));
+            }
+        } catch (IOException e) {
+            throw new InvalidParameterException("Error configuring OpenJCEPlus provider - ", e); 
+        }  
+        
+    }    
+
     protected static class OpenJCEPlusService extends Service {
         private static Class<?> openjceplusClass;
 
