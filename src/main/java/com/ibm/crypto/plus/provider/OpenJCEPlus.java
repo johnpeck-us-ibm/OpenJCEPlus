@@ -8,12 +8,16 @@
 
 package com.ibm.crypto.plus.provider;
 
+import com.ibm.crypto.plus.provider.ProviderServiceReader.ServiceDefinition;
 import com.ibm.crypto.plus.provider.ock.OCKContext;
 import com.ibm.crypto.plus.provider.ock.OCKException;
+
+import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.Provider;
 import java.security.ProviderException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public final class OpenJCEPlus extends OpenJCEPlusProvider {
@@ -91,6 +95,35 @@ public final class OpenJCEPlus extends OpenJCEPlusProvider {
             initializeContext();
         }
         registerAlgorithms(jce);
+        
+        try {
+            ProviderServiceReader reader = new ProviderServiceReader("C:/Users/JohnPeck/work/OpenJCEPlus-work/target/ProviderAttrs.confg");
+            List<ServiceDefinition> services = reader.readServices();
+            
+            System.out.println("Found " + services.size() + " service definitions:");
+            System.out.println();
+            
+            // Group by type
+            List<String> types = getUniqueTypes(services);
+            for (String type : types) {
+                List<ServiceDefinition> typeServices = filterByType(services, type);
+                System.out.println(type + " (" + typeServices.size() + " services):");
+                for (ServiceDefinition service : typeServices) {
+                    System.out.println("  - " + service.getAlgorithm() + 
+                                     " -> " + service.getClassName());
+                    if (!service.getAliases().isEmpty()) {
+                        System.out.println("    Aliases: " + service.getAliases());
+                    }
+                }
+                System.out.println();
+            }
+            
+        } catch (IOException e) {
+            System.err.println("Error reading file: " + e.getMessage());
+            e.printStackTrace();
+            System.exit(1);
+        }
+
 
         if (instance == null) {
             instance = this;
