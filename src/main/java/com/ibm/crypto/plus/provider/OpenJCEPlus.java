@@ -104,9 +104,9 @@ public final class OpenJCEPlus extends OpenJCEPlusProvider {
             System.out.println();
             
             // Group by type
-            List<String> types = getUniqueTypes(services);
+            List<String> types = reader.getUniqueTypes(services);
             for (String type : types) {
-                List<ServiceDefinition> typeServices = filterByType(services, type);
+                List<ServiceDefinition> typeServices = reader.filterByType(services, type);
                 System.out.println(type + " (" + typeServices.size() + " services):");
                 for (ServiceDefinition service : typeServices) {
                     System.out.println("  - " + service.getAlgorithm() + 
