@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2023, 2025
+ * Copyright IBM Corp. 2023, 2026
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms provided by IBM in the LICENSE file that accompanied
@@ -23,6 +23,8 @@ public final class OpenJCEPlusFIPS extends OpenJCEPlusProvider {
     private static final long serialVersionUID = 929669768004683845L;
 
     private static final boolean printFipsDeveloperModeWarning = Boolean.parseBoolean(System.getProperty("openjceplus.fips.devmodewarn", "true"));
+
+    private static final boolean allowNonOAEPFIPS = Boolean.parseBoolean(System.getProperty("com.ibm.openjceplusfips.allowNonOAEP", "false"));
 
     private static final String info = "OpenJCEPlusFIPS Provider implements the following:\n" +
 
@@ -208,8 +210,21 @@ public final class OpenJCEPlusFIPS extends OpenJCEPlusProvider {
                 "com.ibm.crypto.plus.provider.AESCipher", aliases));
 
         aliases = null;
+        Map<String, String> rsaAttr = new HashMap<>();
+
+        String supportedPaddings = "OAEPPADDING"
+                + "|OAEPWITHSHA1ANDMGF1PADDING"
+                + "|OAEPWITHSHA-1ANDMGF1PADDING";
+        if (allowNonOAEPFIPS) {
+            supportedPaddings += "|NOPADDING|PKCS1PADDING";
+        }
+        rsaAttr.put("SupportedModes", "ECB");
+        rsaAttr.put("SupportedPaddings", supportedPaddings);
+        rsaAttr.put("SupportedKeyClasses",
+                "java.security.interfaces.RSAPublicKey" +
+                "|java.security.interfaces.RSAPrivateKey");
         putService(new OpenJCEPlusService(jce, "Cipher", "RSA", "com.ibm.crypto.plus.provider.RSA",
-                aliases));
+                aliases, rsaAttr));
 
         aliases = new String[] {"AESWrap"};
         putService(new OpenJCEPlusService(jce, "Cipher", "AES/KW/NoPadding",
@@ -343,38 +358,6 @@ public final class OpenJCEPlusFIPS extends OpenJCEPlusProvider {
         putService(new OpenJCEPlusService(jce, "KeyGenerator", "HmacSHA3-512",
                 "com.ibm.crypto.plus.provider.HmacKeyGenerator$HmacSHA3_512", aliases));
 
-        aliases = new String[] {"TlsPrf"};
-        putService(new OpenJCEPlusService(jce, "KeyGenerator", "SunTlsPrf",
-                "com.ibm.crypto.plus.provider.TlsPrfGenerator$V10", aliases));
-
-        aliases = new String[] {"Tls12Prf"};
-        putService(new OpenJCEPlusService(jce, "KeyGenerator", "SunTls12Prf",
-                "com.ibm.crypto.plus.provider.TlsPrfGenerator$V12", aliases));
-
-        aliases = new String[] {"TlsRsaPremasterSecret"};
-        putService(new OpenJCEPlusService(jce, "KeyGenerator", "SunTlsRsaPremasterSecret",
-                "com.ibm.crypto.plus.provider.TlsRsaPremasterSecretGenerator", aliases));
-
-        aliases = new String[] {"Tls12RsaPremasterSecret"};
-        putService(new OpenJCEPlusService(jce, "KeyGenerator", "SunTls12RsaPremasterSecret",
-                "com.ibm.crypto.plus.provider.TlsRsaPremasterSecretGenerator", aliases));
-
-        aliases = new String[] {"TlsMasterSecret", "TlsExtendedMasterSecret",
-                "SunTlsExtendedMasterSecret"};
-        putService(new OpenJCEPlusService(jce, "KeyGenerator", "SunTlsMasterSecret",
-                "com.ibm.crypto.plus.provider.TlsMasterSecretGenerator", aliases));
-
-        aliases = new String[] {"Tls12MasterSecret"};
-        putService(new OpenJCEPlusService(jce, "KeyGenerator", "SunTls12MasterSecret",
-                "com.ibm.crypto.plus.provider.TlsMasterSecretGenerator", aliases));
-
-        aliases = new String[] {"TlsKeyMaterial"};
-        putService(new OpenJCEPlusService(jce, "KeyGenerator", "SunTlsKeyMaterial",
-                "com.ibm.crypto.plus.provider.TlsKeyMaterialGenerator", aliases));
-
-        aliases = new String[] {"Tls12KeyMaterial"};
-        putService(new OpenJCEPlusService(jce, "KeyGenerator", "SunTls12KeyMaterial",
-                "com.ibm.crypto.plus.provider.TlsKeyMaterialGenerator", aliases));
         // Not supported in FIPS mode yet - Used for both ChaCha20 and ChaCha20-Poly1305 ciphers
 
         /* =======================================================================
