@@ -85,7 +85,7 @@ public class TestProviderServices extends BaseTest {
         }
 
         assertTrue(true);
-    }
+    } 
     
     @Test
     public void testDefServicesAddAlias() throws Exception {
@@ -100,6 +100,9 @@ public class TestProviderServices extends BaseTest {
         Provider provider2 = ((OpenJCEPlus) provider1).configure(br);
              
         List<String> Alaises = getAliases(provider2, "AlgorithmParameters", "CCM");
+        for (String alias : Alaises) {
+            System.out.println(alias);
+        }
         List<String> expected = Arrays.asList("AESCCM", "TEST", "JOHN");
         assertEquals(expected, Alaises);
 

@@ -83,15 +83,7 @@ public final class OpenJCEPlus extends OpenJCEPlusProvider {
             debug.println("New OpenJCEPlus instance");
         }
 
-        // Do java OCK initialization which includes loading native code
-        // Don't do this in the static initializer because it might
-        // be necessary for an applet running in a browser to grant
-        // access rights beforehand.
-        if (!ockInitialized) {
-            initializeContext();
-        }
- 
-        LoadStringConfig(DefaultProviderAttrs.getConfigString());
+        LoadStringConfig(this, DefaultProviderAttrs.getConfigString());
         
         if (instance == null) {
             instance = this;
@@ -125,28 +117,18 @@ public final class OpenJCEPlus extends OpenJCEPlusProvider {
             debug.println("New OpenJCEPlus instance");
         }
 
-        final OpenJCEPlusProvider jce = this;
-
-        // Do java OCK initialization which includes loading native code
-        // Don't do this in the static initializer because it might
-        // be necessary for an applet running in a browser to grant
-        // access rights beforehand.
-        if (!ockInitialized) {
-            initializeContext();
+        if (instance == null) {
+            instance = this;
         }
-        
-        try {
+
+        try {  
             List<ProviderServiceReader.ServiceDefinition> services = config.readServices();
             for (ProviderServiceReader.ServiceDefinition service : services) {
-                putService(new OpenJCEPlusService(jce, service.getType(), service.getAlgorithm(),
+                putService(new OpenJCEPlusService(this, service.getType(), service.getAlgorithm(),
                     service.getClassName(), service.getAliases().toArray(new String[service.getAliases().size()]), service.getAttributes()));
             }
         } catch (IOException e) {
-            throw new InvalidParameterException("Error configuring OpenJCEPlus provider - " + e.getMessage()); 
-        }         
-
-        if (instance == null) {
-            instance = this;
+            throw new InvalidParameterException("Error configuring OpenJCEPlus provider - ", e);
         }
     }
 

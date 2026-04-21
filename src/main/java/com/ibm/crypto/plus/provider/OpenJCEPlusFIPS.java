@@ -110,15 +110,7 @@ public final class OpenJCEPlusFIPS extends OpenJCEPlusProvider {
             }
         }
 
-        // Do java OCK initialization which includes loading native code
-        // Don't do this in the static initializer because it might
-        // be necessary for an applet running in a browser to grant
-        // access rights beforehand.
-        if (!ockInitialized) {
-            initializeContext();
-        }
-        
-        LoadStringConfig(DefaultFIPSProviderAttrs.getConfigString());    
+        LoadStringConfig(this, DefaultFIPSProviderAttrs.getConfigString());
   
         if (instance == null) {
             instance = this;

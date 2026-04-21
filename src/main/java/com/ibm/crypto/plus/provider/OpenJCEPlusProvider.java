@@ -8,6 +8,9 @@
 
 package com.ibm.crypto.plus.provider;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.StringReader;
 import java.lang.ref.Cleaner;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -116,7 +119,7 @@ public abstract class OpenJCEPlusProvider extends java.security.Provider {
         }
     }
 
-    protected void LoadStringConfig(String configName) throws InvalidParameterException {
+    protected void LoadStringConfig(Provider prov, String configName) throws InvalidParameterException {
         if (configName == null) {
             throw new InvalidParameterException("configName is null");
         }
@@ -131,7 +134,7 @@ public abstract class OpenJCEPlusProvider extends java.security.Provider {
             ProviderServiceReader config = new ProviderServiceReader(new BufferedReader(new StringReader(configName)));  
             List<ProviderServiceReader.ServiceDefinition> services = config.readServices();
             for (ProviderServiceReader.ServiceDefinition service : services) {
-                putService(new OpenJCEPlusService(this, service.getType(), service.getAlgorithm(),
+                putService(new OpenJCEPlusService(prov, service.getType(), service.getAlgorithm(),
                     service.getClassName(), service.getAliases().toArray(new String[service.getAliases().size()]), service.getAttributes()));
             }
         } catch (IOException e) {

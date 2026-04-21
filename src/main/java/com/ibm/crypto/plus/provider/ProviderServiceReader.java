@@ -249,6 +249,7 @@ public class ProviderServiceReader {
         //Process the aliases from the config file.
         if (configPr != null) {
             String value = configPr.getProperty(keyBase + ".add");
+
             if (value != null) {
                 String[] aliases = value.split("\\s*,\\s*");
                 for (String alias : aliases) {
