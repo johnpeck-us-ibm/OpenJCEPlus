@@ -136,6 +136,26 @@ public final class OpenJCEPlus extends OpenJCEPlusProvider {
         } catch (IOException e) {
             throw new InvalidParameterException("Error configuring OpenJCEPlus provider - ", e);
         }
+
+        if (debug != null) {
+            debug.println("OpenJCEPlus instance created");
+            for (Provider.Service service1 : this.getServices()) {
+                debug.println("Service: " + service1.getType() + " " + service1.getAlgorithm() + " " + service1.getClassName());
+
+                //compare aliases
+                for (String key : this.stringPropertyNames()) {
+                    // Check for alias properties specific to the type and algorithm
+                    if (key.startsWith("Alg.Alias." + service1.getType() + ".")) {               
+                        String aliasAlgorithm = this.getProperty(key);
+                        if (service1.getAlgorithm().equals(aliasAlgorithm)) {
+                            // Extract the alias name from the key
+                            String aliasName = key.substring(("Alg.Alias." + service1.getType() + ".").length());
+                            debug.println("Service Alias: " + aliasName);
+                        }
+                    }
+                }
+            }   
+        }
     }
 
     // Return the instance of this class or create one if needed.

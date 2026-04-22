@@ -66,7 +66,12 @@ Service.<ServiceType>.<AlgorithmName> = <ImplementationClassName>
 
 #### Key Structure:
 - **Part 0**: Must be `Service` (case-insensitive)
-- **Part 1**: Service type (e.g., Cipher, Signature, MessageDigest)
+Service.AlgorithmParameterGenerator.CCM = com.ibm.crypto.plus.provider.CCMParameterGenerator
+Service.AlgorithmParameterGenerator.CCM = com.ibm.crypto.plus.provider.CCMParameterGenerator
+- **Part 1**: Service type - Cipher, Signature, MessageDigest, SecureRandom, SecretKeyFactory, 
+                             KEM, KDF, MAC, KeyPairGenerator, KeyGenerator, KeyFactory, KeyAgreement, 
+                             AlgorithmParameterGenerator, AlgorithmParameters, etc. 
+                             (see Java Cryptography Architecture API Specification and Reference)
 - **Part 2**: Algorithm name or transformation
 
 #### Examples:

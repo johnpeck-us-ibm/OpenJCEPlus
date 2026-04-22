@@ -269,7 +269,6 @@ public class TestProviderServices extends BaseTest {
         String config = null;
         BufferedReader rd = null;
         
-
         try {
             //File not found
             ProviderServiceReader reader = new ProviderServiceReader("./src/test/ProviderDefAttrs.confg");
