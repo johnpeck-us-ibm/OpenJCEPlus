@@ -268,7 +268,8 @@ public class TestProviderServices extends BaseTest {
     public void testProviderServicesErrorTest() throws Exception {
         String config = null;
         BufferedReader rd = null;
- 
+        
+
         try {
             //File not found
             ProviderServiceReader reader = new ProviderServiceReader("./src/test/ProviderDefAttrs.confg");
@@ -285,6 +286,19 @@ public class TestProviderServices extends BaseTest {
         }
         try {
             //bufferedreader null
+            ProviderServiceReader reader = new ProviderServiceReader(rd);
+            reader.readServices();
+        } catch (IOException ioe) {
+            System.out.println(ioe.getMessage());
+        }
+        try {
+            //No Name in config
+            config = "description =  OpenJCEPlus-test Provider\n"
+                + "default = true\n"
+                + "AlgorithmParameters.CCM.attr.add.TestAttr1 = TestValue1\n"
+                + "AlgorithmParameters.CCM.attr.add.TestAttr2 = TestValue2\n"
+                + "AlgorithmParameters.CCM.attr.delete.TestAttr1 = ";
+            rd = new BufferedReader(new StringReader(config));
             ProviderServiceReader reader = new ProviderServiceReader(rd);
             reader.readServices();
         } catch (IOException ioe) {

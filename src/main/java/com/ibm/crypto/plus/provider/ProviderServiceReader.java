@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import sun.security.util.Debug;
 
 /**
  * A class to read and parse Provider.Service definitions from a file.
@@ -38,6 +39,7 @@ public class ProviderServiceReader {
     private Set<String> setDefAttributes = null;
     private Properties defPr = null;
     private boolean def = false;
+    private static Debug debug = Debug.getInstance("jceplus");
     
     /**
      * Represents a single service definition parsed from the file.
@@ -207,6 +209,10 @@ public class ProviderServiceReader {
                 }
             }
         } catch (Exception e) {
+            if (debug != null) {
+                debug.println("File issue Stack trace: ");
+                e.printStackTrace();
+            }
             throw new IOException("File issue: " + e.getMessage());
         }
        

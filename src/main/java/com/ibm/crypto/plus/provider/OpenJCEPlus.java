@@ -107,7 +107,13 @@ public final class OpenJCEPlus extends OpenJCEPlusProvider {
     }
 
     public Provider configure(BufferedReader br) throws InvalidParameterException {
-        return new OpenJCEPlus(new ProviderServiceReader(br));
+        ProviderServiceReader newConfig = new ProviderServiceReader(br);
+
+        if (newConfig.getName() == null || newConfig.getName().length() == 0) {
+            new InvalidParameterException("Name in configuation file is null or empty");
+        }    
+
+        return new OpenJCEPlus(newConfig);
     }
 
     public OpenJCEPlus(ProviderServiceReader config) {
