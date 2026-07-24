@@ -21,6 +21,8 @@ import java.security.Signature;
 import java.security.SignatureException;
 import java.security.SignatureSpi;
 import java.security.spec.AlgorithmParameterSpec;
+import java.security.spec.MGF1ParameterSpec;
+import java.security.spec.PSSParameterSpec;
 import sun.security.util.DerOutputStream;
 import sun.security.util.DerValue;
 
@@ -61,6 +63,7 @@ abstract class CompositeSignatureImpl extends SignatureSpi {
 
     private Signature mldsaSig;
     private Signature tradSig;
+    private final PSSParameterSpec tradPssParams;
     private boolean initSign = false;
     private boolean initVerify = false;
 
@@ -78,6 +81,11 @@ abstract class CompositeSignatureImpl extends SignatureSpi {
         this.compositeAlg = compositeAlg;
         this.mldsaSigAlg = mldsaSigAlg;
         this.tradSigAlg = tradSigAlg;
+        this.tradPssParams = buildPssParams(tradSigAlg);
+        if (null != tradPssParams ) {
+            tradSigAlg = "RSAPSS";
+        }
+
         try {
             this.mldsaSig = Signature.getInstance(mldsaSigAlg, provider);
             this.tradSig = Signature.getInstance(tradSigAlg, provider);
@@ -85,6 +93,50 @@ abstract class CompositeSignatureImpl extends SignatureSpi {
             throw provider.providerException(
                     "Failed to initialize composite signature engines", e);
         }
+    }
+
+    /**
+     * Builds the {@link PSSParameterSpec} required by the traditional RSA-PSS
+     * component, following the same pattern used in BaseTestRSAPSS2:
+     * <pre>
+     * new PSSParameterSpec(hashName, "MGF1", new MGF1ParameterSpec(hashName), saltLen, 1)
+     * </pre>
+     * Returns {@code null} for non-PSS algorithms.
+     */
+    private static PSSParameterSpec buildPssParams(String tradSigAlg) {
+        String up = tradSigAlg.toUpperCase(java.util.Locale.ROOT);
+        if (!up.contains("PSS")) {
+            return null;
+        }
+        // Derive the hash algorithm name from the signature algorithm name.
+        // Recognized forms: "SHA256withRSASSA-PSS", "SHA512withRSASSA-PSS".
+        String hashName;
+        if (up.contains("SHA-512") || up.startsWith("SHA512")) {
+            hashName = "SHA-512";
+        } else if (up.contains("SHA-384") || up.startsWith("SHA384")) {
+            hashName = "SHA-384";
+        } else if (up.contains("SHA-256") || up.startsWith("SHA256")) {
+            hashName = "SHA-256";
+        } else if (up.contains("SHA-224") || up.startsWith("SHA224")) {
+            hashName = "SHA-224";
+        } else {
+            // Default to SHA-256 for unrecognized PSS variants
+            hashName = "SHA-256";
+        }
+        // Salt length matches the hash output length (recommended by FIPS 186-5)
+        int saltLen;
+        switch (hashName) {
+            case "SHA-512": saltLen = 64; break;
+            case "SHA-384": saltLen = 48; break;
+            case "SHA-224": saltLen = 28; break;
+            default:        saltLen = 32; break; // SHA-256
+        }
+        return new PSSParameterSpec(
+                hashName,                       // mdName
+                "MGF1",                         // mgfName
+                new MGF1ParameterSpec(hashName), // MGFParameterSpec
+                saltLen,                        // saltLen
+                PSSParameterSpec.TRAILER_FIELD_BC); // trailerField = 1
     }
 
     // -----------------------------------------------------------------------
@@ -109,6 +161,9 @@ abstract class CompositeSignatureImpl extends SignatureSpi {
             PrivateKey tradKey = decodePrivateKey(tradSigAlg, ck.getTraditionalEncoded());
             mldsaSig.initSign(mldsaKey);
             tradSig.initSign(tradKey);
+            if (tradPssParams != null) {
+                tradSig.setParameter(tradPssParams);
+            }
         } catch (Exception e) {
             throw new InvalidKeyException("Failed to initialize sign operation", e);
         }
@@ -135,6 +190,9 @@ abstract class CompositeSignatureImpl extends SignatureSpi {
             PublicKey tradKey = decodePublicKey(tradSigAlg, ck.getTraditionalEncoded());
             mldsaSig.initVerify(mldsaKey);
             tradSig.initVerify(tradKey);
+            if (tradPssParams != null) {
+                tradSig.setParameter(tradPssParams);
+            }
         } catch (Exception e) {
             throw new InvalidKeyException("Failed to initialize verify operation", e);
         }

@@ -11,10 +11,8 @@ package com.ibm.crypto.plus.provider;
 import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.PublicKey;
-
 import javax.security.auth.DestroyFailedException;
 import javax.security.auth.Destroyable;
-
 import sun.security.util.DerInputStream;
 import sun.security.util.DerOutputStream;
 import sun.security.util.DerValue;
