@@ -185,9 +185,33 @@ class CompositeKeyFactory extends KeyFactorySpi {
         }
     }
 
-    public static final class MLDSA65ECDSAP384SHA384 extends CompositeKeyFactory {
-        public MLDSA65ECDSAP384SHA384(OpenJCEPlusProvider p) {
-            super(p, "MLDSA65-ECDSA-P384-SHA384");
+    public static final class MLDSA65RSA4096PSSSHA512 extends CompositeKeyFactory {
+        public MLDSA65RSA4096PSSSHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA65-RSA4096-PSS-SHA512");
+        }
+    }
+
+    public static final class MLDSA65RSA4096PKCS15SHA512 extends CompositeKeyFactory {
+        public MLDSA65RSA4096PKCS15SHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA65-RSA4096-PKCS15-SHA512");
+        }
+    }
+
+    public static final class MLDSA65ECDSAP256SHA512 extends CompositeKeyFactory {
+        public MLDSA65ECDSAP256SHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA65-ECDSA-P256-SHA512");
+        }
+    }
+
+    public static final class MLDSA65ECDSAP384SHA512 extends CompositeKeyFactory {
+        public MLDSA65ECDSAP384SHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA65-ECDSA-P384-SHA512");
+        }
+    }
+
+    public static final class MLDSA65ECDSABrainpoolP256r1SHA512 extends CompositeKeyFactory {
+        public MLDSA65ECDSABrainpoolP256r1SHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA65-ECDSA-brainpoolP256r1-SHA512");
         }
     }
 
@@ -197,21 +221,39 @@ class CompositeKeyFactory extends KeyFactorySpi {
         }
     }
 
-    public static final class MLDSA87ECDSAP384SHA384 extends CompositeKeyFactory {
-        public MLDSA87ECDSAP384SHA384(OpenJCEPlusProvider p) {
-            super(p, "MLDSA87-ECDSA-P384-SHA384");
+    public static final class MLDSA87ECDSAP384SHA512 extends CompositeKeyFactory {
+        public MLDSA87ECDSAP384SHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA87-ECDSA-P384-SHA512");
         }
     }
 
-    public static final class MLDSA87ECDSAP521SHA512 extends CompositeKeyFactory {
-        public MLDSA87ECDSAP521SHA512(OpenJCEPlusProvider p) {
-            super(p, "MLDSA87-ECDSA-P521-SHA512");
+    public static final class MLDSA87ECDSABrainpoolP384r1SHA512 extends CompositeKeyFactory {
+        public MLDSA87ECDSABrainpoolP384r1SHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA87-ECDSA-brainpoolP384r1-SHA512");
         }
     }
 
     public static final class MLDSA87Ed448 extends CompositeKeyFactory {
         public MLDSA87Ed448(OpenJCEPlusProvider p) {
             super(p, "MLDSA87-Ed448");
+        }
+    }
+
+    public static final class MLDSA87RSA3072PSSSHA512 extends CompositeKeyFactory {
+        public MLDSA87RSA3072PSSSHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA87-RSA3072-PSS-SHA512");
+        }
+    }
+
+    public static final class MLDSA87RSA4096PSSSHA512 extends CompositeKeyFactory {
+        public MLDSA87RSA4096PSSSHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA87-RSA4096-PSS-SHA512");
+        }
+    }
+
+    public static final class MLDSA87ECDSAP521SHA512 extends CompositeKeyFactory {
+        public MLDSA87ECDSAP521SHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA87-ECDSA-P521-SHA512");
         }
     }
 }

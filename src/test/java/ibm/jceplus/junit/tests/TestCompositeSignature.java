@@ -65,11 +65,18 @@ public class TestCompositeSignature extends BaseTestSignature {
         "MLDSA44-ECDSA-P256-SHA256",
         "MLDSA65-RSA3072-PSS-SHA512",
         "MLDSA65-RSA3072-PKCS15-SHA512",
-        "MLDSA65-ECDSA-P384-SHA384",
+        "MLDSA65-RSA4096-PSS-SHA512",
+        "MLDSA65-RSA4096-PKCS15-SHA512",
+        "MLDSA65-ECDSA-P256-SHA512",
+        "MLDSA65-ECDSA-P384-SHA512",
+        "MLDSA65-ECDSA-brainpoolP256r1-SHA512",
         "MLDSA65-Ed25519",
-        "MLDSA87-ECDSA-P384-SHA384",
+        "MLDSA87-ECDSA-P384-SHA512",
+        "MLDSA87-ECDSA-brainpoolP384r1-SHA512",
         "MLDSA87-ECDSA-P521-SHA512",
-        "MLDSA87-Ed448"
+        "MLDSA87-Ed448",
+        "MLDSA87-RSA3072-PSS-SHA512",
+        "MLDSA87-RSA4096-PSS-SHA512"
     })
     public void testSignVerify(String algorithm) throws Exception {
         KeyPair kp = generateKeyPair(algorithm);
@@ -88,11 +95,18 @@ public class TestCompositeSignature extends BaseTestSignature {
         "MLDSA44-ECDSA-P256-SHA256",
         "MLDSA65-RSA3072-PSS-SHA512",
         "MLDSA65-RSA3072-PKCS15-SHA512",
-        "MLDSA65-ECDSA-P384-SHA384",
+        "MLDSA65-RSA4096-PSS-SHA512",
+        "MLDSA65-RSA4096-PKCS15-SHA512",
+        "MLDSA65-ECDSA-P256-SHA512",
+        "MLDSA65-ECDSA-P384-SHA512",
+        "MLDSA65-ECDSA-brainpoolP256r1-SHA512",
         "MLDSA65-Ed25519",
-        "MLDSA87-ECDSA-P384-SHA384",
+        "MLDSA87-ECDSA-P384-SHA512",
+        "MLDSA87-ECDSA-brainpoolP384r1-SHA512",
         "MLDSA87-ECDSA-P521-SHA512",
-        "MLDSA87-Ed448"
+        "MLDSA87-Ed448",
+        "MLDSA87-RSA3072-PSS-SHA512",
+        "MLDSA87-RSA4096-PSS-SHA512"
     })
     public void testKeyEncodingRoundTrip(String algorithm) throws Exception {
         KeyPair kp = generateKeyPair(algorithm);
@@ -119,11 +133,18 @@ public class TestCompositeSignature extends BaseTestSignature {
         "MLDSA44-ECDSA-P256-SHA256",
         "MLDSA65-RSA3072-PSS-SHA512",
         "MLDSA65-RSA3072-PKCS15-SHA512",
-        "MLDSA65-ECDSA-P384-SHA384",
+        "MLDSA65-RSA4096-PSS-SHA512",
+        "MLDSA65-RSA4096-PKCS15-SHA512",
+        "MLDSA65-ECDSA-P256-SHA512",
+        "MLDSA65-ECDSA-P384-SHA512",
+        "MLDSA65-ECDSA-brainpoolP256r1-SHA512",
         "MLDSA65-Ed25519",
-        "MLDSA87-ECDSA-P384-SHA384",
+        "MLDSA87-ECDSA-P384-SHA512",
+        "MLDSA87-ECDSA-brainpoolP384r1-SHA512",
         "MLDSA87-ECDSA-P521-SHA512",
-        "MLDSA87-Ed448"
+        "MLDSA87-Ed448",
+        "MLDSA87-RSA3072-PSS-SHA512",
+        "MLDSA87-RSA4096-PSS-SHA512"
     })
     public void testTamperedSignatureFails(String algorithm) throws Exception {
         KeyPair kp = generateKeyPair(algorithm);
@@ -156,11 +177,18 @@ public class TestCompositeSignature extends BaseTestSignature {
         "MLDSA44-ECDSA-P256-SHA256",
         "MLDSA65-RSA3072-PSS-SHA512",
         "MLDSA65-RSA3072-PKCS15-SHA512",
-        "MLDSA65-ECDSA-P384-SHA384",
+        "MLDSA65-RSA4096-PSS-SHA512",
+        "MLDSA65-RSA4096-PKCS15-SHA512",
+        "MLDSA65-ECDSA-P256-SHA512",
+        "MLDSA65-ECDSA-P384-SHA512",
+        "MLDSA65-ECDSA-brainpoolP256r1-SHA512",
         "MLDSA65-Ed25519",
-        "MLDSA87-ECDSA-P384-SHA384",
+        "MLDSA87-ECDSA-P384-SHA512",
+        "MLDSA87-ECDSA-brainpoolP384r1-SHA512",
         "MLDSA87-ECDSA-P521-SHA512",
-        "MLDSA87-Ed448"
+        "MLDSA87-Ed448",
+        "MLDSA87-RSA3072-PSS-SHA512",
+        "MLDSA87-RSA4096-PSS-SHA512"
     })
     public void testWrongKeyFails(String algorithm) throws Exception {
         KeyPair kp1 = generateKeyPair(algorithm);

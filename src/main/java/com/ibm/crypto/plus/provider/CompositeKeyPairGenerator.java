@@ -145,9 +145,34 @@ abstract class CompositeKeyPairGenerator extends KeyPairGeneratorSpi {
         }
     }
 
-    public static final class MLDSA65ECDSAP384SHA384 extends CompositeKeyPairGenerator {
-        public MLDSA65ECDSAP384SHA384(OpenJCEPlusProvider p) {
-            super(p, "MLDSA65-ECDSA-P384-SHA384", "ML-DSA-65", "EC", "secp384r1", 0);
+    public static final class MLDSA65RSA4096PSSSHA512 extends CompositeKeyPairGenerator {
+        public MLDSA65RSA4096PSSSHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA65-RSA4096-PSS-SHA512", "ML-DSA-65", "RSA", null, 4096);
+        }
+    }
+
+    public static final class MLDSA65RSA4096PKCS15SHA512 extends CompositeKeyPairGenerator {
+        public MLDSA65RSA4096PKCS15SHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA65-RSA4096-PKCS15-SHA512", "ML-DSA-65", "RSA", null, 4096);
+        }
+    }
+
+    public static final class MLDSA65ECDSAP256SHA512 extends CompositeKeyPairGenerator {
+        public MLDSA65ECDSAP256SHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA65-ECDSA-P256-SHA512", "ML-DSA-65", "EC", "secp256r1", 0);
+        }
+    }
+
+    public static final class MLDSA65ECDSAP384SHA512 extends CompositeKeyPairGenerator {
+        public MLDSA65ECDSAP384SHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA65-ECDSA-P384-SHA512", "ML-DSA-65", "EC", "secp384r1", 0);
+        }
+    }
+
+    public static final class MLDSA65ECDSABrainpoolP256r1SHA512 extends CompositeKeyPairGenerator {
+        public MLDSA65ECDSABrainpoolP256r1SHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA65-ECDSA-brainpoolP256r1-SHA512", "ML-DSA-65",
+                    "EC", "brainpoolP256r1", 0);
         }
     }
 
@@ -157,21 +182,40 @@ abstract class CompositeKeyPairGenerator extends KeyPairGeneratorSpi {
         }
     }
 
-    public static final class MLDSA87ECDSAP384SHA384 extends CompositeKeyPairGenerator {
-        public MLDSA87ECDSAP384SHA384(OpenJCEPlusProvider p) {
-            super(p, "MLDSA87-ECDSA-P384-SHA384", "ML-DSA-87", "EC", "secp384r1", 0);
+    public static final class MLDSA87ECDSAP384SHA512 extends CompositeKeyPairGenerator {
+        public MLDSA87ECDSAP384SHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA87-ECDSA-P384-SHA512", "ML-DSA-87", "EC", "secp384r1", 0);
         }
     }
 
-    public static final class MLDSA87ECDSAP521SHA512 extends CompositeKeyPairGenerator {
-        public MLDSA87ECDSAP521SHA512(OpenJCEPlusProvider p) {
-            super(p, "MLDSA87-ECDSA-P521-SHA512", "ML-DSA-87", "EC", "secp521r1", 0);
+    public static final class MLDSA87ECDSABrainpoolP384r1SHA512 extends CompositeKeyPairGenerator {
+        public MLDSA87ECDSABrainpoolP384r1SHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA87-ECDSA-brainpoolP384r1-SHA512", "ML-DSA-87",
+                    "EC", "brainpoolP384r1", 0);
         }
     }
 
     public static final class MLDSA87Ed448 extends CompositeKeyPairGenerator {
         public MLDSA87Ed448(OpenJCEPlusProvider p) {
             super(p, "MLDSA87-Ed448", "ML-DSA-87", "Ed448", null, 0);
+        }
+    }
+
+    public static final class MLDSA87RSA3072PSSSHA512 extends CompositeKeyPairGenerator {
+        public MLDSA87RSA3072PSSSHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA87-RSA3072-PSS-SHA512", "ML-DSA-87", "RSA", null, 3072);
+        }
+    }
+
+    public static final class MLDSA87RSA4096PSSSHA512 extends CompositeKeyPairGenerator {
+        public MLDSA87RSA4096PSSSHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA87-RSA4096-PSS-SHA512", "ML-DSA-87", "RSA", null, 4096);
+        }
+    }
+
+    public static final class MLDSA87ECDSAP521SHA512 extends CompositeKeyPairGenerator {
+        public MLDSA87ECDSAP521SHA512(OpenJCEPlusProvider p) {
+            super(p, "MLDSA87-ECDSA-P521-SHA512", "ML-DSA-87", "EC", "secp521r1", 0);
         }
     }
 }
