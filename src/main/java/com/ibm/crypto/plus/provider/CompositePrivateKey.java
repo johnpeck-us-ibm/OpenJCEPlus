@@ -85,6 +85,9 @@ final class CompositePrivateKey implements PrivateKey {
 
             // Parse inner SEQUENCE { OneAsymmetricKey, OneAsymmetricKey }
             DerValue inner = new DerValue(privKeyOctets);
+            if (inner.tag == DerValue.tag_OctetString) {
+                inner = new DerValue(inner.getOctetString());
+            }
             if (inner.tag != DerValue.tag_Sequence) {
                 throw new InvalidKeyException("Composite payload is not a SEQUENCE");
             }

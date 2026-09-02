@@ -24,6 +24,8 @@ import org.junit.platform.suite.api.Suite;
     TestAliases.class,
     TestAttributes.class,
     TestByteArrayOutputDelay.class,
+    TestCompositeSig.class,
+    TestCompositeSigKAT.class,
     TestDeterministic.class,
     TestDH.class,
     TestDHInteropSunJCE.class,

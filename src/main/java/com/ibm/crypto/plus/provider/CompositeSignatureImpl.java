@@ -23,6 +23,8 @@ import java.security.SignatureSpi;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.MGF1ParameterSpec;
 import java.security.spec.PSSParameterSpec;
+import java.util.HexFormat;
+
 import sun.security.util.DerOutputStream;
 import sun.security.util.DerValue;
 
@@ -40,23 +42,31 @@ import sun.security.util.DerValue;
  * <p>Verification decodes the SEQUENCE and succeeds only if <em>both</em>
  * component signatures are valid.
  *
- * <h2>Domain separation (draft §7)</h2>
- * <p>Before passing to each sub-engine the message is prepended with:
+ * <h2>Message representative (draft §2.2)</h2>
+ * <p>Before passing to each sub-engine the message representative M' is formed as:
  * <pre>
- * M' = "CompositeAlgorithm" || 0x00 || DER(OID) || len(ctx) || ctx || message
+ * M' = Prefix || Label || len(ctx) || ctx || PH( M )
  * </pre>
- * where {@code ctx} defaults to an empty byte array.
+ * where {@code Prefix} is the fixed ASCII string
+ * {@code "CompositeAlgorithmSignatures2025"}, {@code Label} is the
+ * per-algorithm ASCII label (e.g. {@code "COMPSIG-MLDSA44-RSA2048-PSS-SHA256"}),
+ * {@code ctx} defaults to an empty byte array, and {@code PH} is the
+ * per-algorithm pre-hash function (SHA-256 or SHA-512).
  */
 @SuppressWarnings("restriction")
 abstract class CompositeSignatureImpl extends SignatureSpi {
 
     private static final byte[] DOMAIN_PREFIX =
-            "CompositeAlgorithm".getBytes(StandardCharsets.US_ASCII);
+            "CompositeAlgorithmSignatures2025".getBytes(StandardCharsets.US_ASCII);
 
     private final OpenJCEPlusProvider provider;
     private final String compositeAlg;
     private final String mldsaSigAlg;
     private final String tradSigAlg;
+    /** Per-algorithm label bytes (ASCII), e.g. "COMPSIG-MLDSA44-RSA2048-PSS-SHA256". */
+    private final byte[] label;
+    /** JCA name of the pre-hash function PH (either "SHA-256" or "SHA-512"). */
+    private final String phAlg;
 
     /** Buffered message bytes accumulated via {@code engineUpdate}. */
     private final ByteArrayOutputStream message = new ByteArrayOutputStream();
@@ -74,13 +84,17 @@ abstract class CompositeSignatureImpl extends SignatureSpi {
      *                     (e.g. {@code "ML-DSA-44"})
      * @param tradSigAlg   the JCA algorithm name for the traditional Signature engine
      *                     (e.g. {@code "SHA256withECDSA"})
+     * @param phAlg        the JCA name of the pre-hash function PH per draft §6
+     *                     (either {@code "SHA-256"} or {@code "SHA-512"})
      */
     CompositeSignatureImpl(OpenJCEPlusProvider provider,
-            String compositeAlg, String mldsaSigAlg, String tradSigAlg) {
+            String compositeAlg, String mldsaSigAlg, String tradSigAlg, String phAlg) {
         this.provider = provider;
         this.compositeAlg = compositeAlg;
         this.mldsaSigAlg = mldsaSigAlg;
         this.tradSigAlg = tradSigAlg;
+        this.label = ("COMPSIG-" + compositeAlg).getBytes(StandardCharsets.US_ASCII);
+        this.phAlg = phAlg;
         this.tradPssParams = buildPssParams(tradSigAlg);
         if (null != tradPssParams ) {
             tradSigAlg = "RSAPSS";
@@ -219,7 +233,7 @@ abstract class CompositeSignatureImpl extends SignatureSpi {
         try {
             byte[] domainMsg = buildDomainSeparatedMessage(message.toByteArray());
             message.reset();
-
+            System.out.println(" Message - \n" +  HexFormat.of().formatHex(domainMsg));
             mldsaSig.update(domainMsg);
             tradSig.update(domainMsg);
 
@@ -289,32 +303,36 @@ abstract class CompositeSignatureImpl extends SignatureSpi {
     }
 
     // -----------------------------------------------------------------------
-    // Domain separation (draft §7)
+    // Message representative construction (draft §2.2)
     // -----------------------------------------------------------------------
 
     /**
-     * Builds the domain-separated message:
+     * Builds the message representative M' per draft §2.2:
      * <pre>
-     * M' = "CompositeAlgorithm" || 0x00 || DER(OID) || 0x00 || message
+     * M' = Prefix || Label || len(ctx) || ctx || PH( M )
      * </pre>
-     *
-     * <p>The context string ({@code ctx}) is fixed to the empty byte array
-     * per the default specified in §7 of the draft.
+     * {@code ctx} is treated as empty (len = 0) since this API does not
+     * expose a context parameter.  {@code PH} is the per-algorithm pre-hash
+     * function stored in {@link #phAlg}.
      */
-    private byte[] buildDomainSeparatedMessage(byte[] msg) throws IOException {
-        // Encode the OID as a DER TLV (tag 0x06 + length + content)
-        DerOutputStream oidOut = new DerOutputStream();
-        oidOut.putOID(CompositeAlgorithmId.getOID(compositeAlg));
-        byte[] oidDer = oidOut.toByteArray();
+    private byte[] buildDomainSeparatedMessage(byte[] msg) throws SignatureException {
+        try {
+            java.security.MessageDigest md =
+                    java.security.MessageDigest.getInstance(phAlg);
+            byte[] ph = md.digest(msg);
 
-        ByteArrayOutputStream buf = new ByteArrayOutputStream(
-                DOMAIN_PREFIX.length + 1 + oidDer.length + 1 + msg.length);
-        buf.write(DOMAIN_PREFIX);
-        buf.write(0x00); // separator
-        buf.write(oidDer);
-        buf.write(0x00); // len(ctx) = 0 (empty context)
-        buf.write(msg);
-        return buf.toByteArray();
+            ByteArrayOutputStream buf = new ByteArrayOutputStream(
+                    DOMAIN_PREFIX.length + label.length + 1 + ph.length);
+            buf.write(DOMAIN_PREFIX, 0, DOMAIN_PREFIX.length); // Prefix
+            buf.write(label, 0, label.length);                  // Label ("COMPSIG-...")
+            buf.write(0x00);                                    // len(ctx) = 0
+            // ctx is empty -- nothing to write
+            buf.write(ph, 0, ph.length);                        // PH( M )
+            return buf.toByteArray();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new SignatureException(
+                    "Pre-hash algorithm not available: " + phAlg, e);
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -419,109 +437,111 @@ abstract class CompositeSignatureImpl extends SignatureSpi {
 
     public static final class MLDSA44RSA2048PSSSHA256 extends CompositeSignatureImpl {
         public MLDSA44RSA2048PSSSHA256(OpenJCEPlusProvider p) {
-            super(p, "MLDSA44-RSA2048-PSS-SHA256", "ML-DSA-44", "SHA256withRSASSA-PSS");
+            super(p, "MLDSA44-RSA2048-PSS-SHA256", "ML-DSA-44", "SHA256withRSASSA-PSS", "SHA-256");
         }
     }
 
     public static final class MLDSA44RSA2048PKCS15SHA256 extends CompositeSignatureImpl {
         public MLDSA44RSA2048PKCS15SHA256(OpenJCEPlusProvider p) {
-            super(p, "MLDSA44-RSA2048-PKCS15-SHA256", "ML-DSA-44", "SHA256withRSA");
+            super(p, "MLDSA44-RSA2048-PKCS15-SHA256", "ML-DSA-44", "SHA256withRSA", "SHA-256");
         }
     }
 
     public static final class MLDSA44Ed25519 extends CompositeSignatureImpl {
         public MLDSA44Ed25519(OpenJCEPlusProvider p) {
-            super(p, "MLDSA44-Ed25519", "ML-DSA-44", "Ed25519");
+            super(p, "MLDSA44-Ed25519", "ML-DSA-44", "Ed25519", "SHA-512");
         }
     }
 
     public static final class MLDSA44ECDSAP256SHA256 extends CompositeSignatureImpl {
         public MLDSA44ECDSAP256SHA256(OpenJCEPlusProvider p) {
-            super(p, "MLDSA44-ECDSA-P256-SHA256", "ML-DSA-44", "SHA256withECDSA");
+            super(p, "MLDSA44-ECDSA-P256-SHA256", "ML-DSA-44", "SHA256withECDSA", "SHA-256");
         }
     }
 
     public static final class MLDSA65RSA3072PSSSHA512 extends CompositeSignatureImpl {
         public MLDSA65RSA3072PSSSHA512(OpenJCEPlusProvider p) {
-            super(p, "MLDSA65-RSA3072-PSS-SHA512", "ML-DSA-65", "SHA512withRSASSA-PSS");
+            super(p, "MLDSA65-RSA3072-PSS-SHA512", "ML-DSA-65", "SHA512withRSASSA-PSS", "SHA-512");
         }
     }
 
     public static final class MLDSA65RSA3072PKCS15SHA512 extends CompositeSignatureImpl {
         public MLDSA65RSA3072PKCS15SHA512(OpenJCEPlusProvider p) {
-            super(p, "MLDSA65-RSA3072-PKCS15-SHA512", "ML-DSA-65", "SHA512withRSA");
+            super(p, "MLDSA65-RSA3072-PKCS15-SHA512", "ML-DSA-65", "SHA512withRSA", "SHA-512");
         }
     }
 
     public static final class MLDSA65RSA4096PSSSHA512 extends CompositeSignatureImpl {
         public MLDSA65RSA4096PSSSHA512(OpenJCEPlusProvider p) {
-            super(p, "MLDSA65-RSA4096-PSS-SHA512", "ML-DSA-65", "SHA512withRSASSA-PSS");
+            super(p, "MLDSA65-RSA4096-PSS-SHA512", "ML-DSA-65", "SHA512withRSASSA-PSS", "SHA-512");
         }
     }
 
     public static final class MLDSA65RSA4096PKCS15SHA512 extends CompositeSignatureImpl {
         public MLDSA65RSA4096PKCS15SHA512(OpenJCEPlusProvider p) {
-            super(p, "MLDSA65-RSA4096-PKCS15-SHA512", "ML-DSA-65", "SHA512withRSA");
+            super(p, "MLDSA65-RSA4096-PKCS15-SHA512", "ML-DSA-65", "SHA512withRSA", "SHA-512");
         }
     }
 
     public static final class MLDSA65ECDSAP256SHA512 extends CompositeSignatureImpl {
         public MLDSA65ECDSAP256SHA512(OpenJCEPlusProvider p) {
-            super(p, "MLDSA65-ECDSA-P256-SHA512", "ML-DSA-65", "SHA512withECDSA");
+            super(p, "MLDSA65-ECDSA-P256-SHA512", "ML-DSA-65", "SHA512withECDSA", "SHA-512");
         }
     }
 
     public static final class MLDSA65ECDSAP384SHA512 extends CompositeSignatureImpl {
         public MLDSA65ECDSAP384SHA512(OpenJCEPlusProvider p) {
-            super(p, "MLDSA65-ECDSA-P384-SHA512", "ML-DSA-65", "SHA384withECDSA");
+            super(p, "MLDSA65-ECDSA-P384-SHA512", "ML-DSA-65", "SHA384withECDSA", "SHA-512");
         }
     }
 
     public static final class MLDSA65ECDSABrainpoolP256r1SHA512 extends CompositeSignatureImpl {
         public MLDSA65ECDSABrainpoolP256r1SHA512(OpenJCEPlusProvider p) {
-            super(p, "MLDSA65-ECDSA-brainpoolP256r1-SHA512", "ML-DSA-65", "SHA256withECDSA");
+            super(p, "MLDSA65-ECDSA-brainpoolP256r1-SHA512", "ML-DSA-65",
+                    "SHA256withECDSA", "SHA-512");
         }
     }
 
     public static final class MLDSA65Ed25519 extends CompositeSignatureImpl {
         public MLDSA65Ed25519(OpenJCEPlusProvider p) {
-            super(p, "MLDSA65-Ed25519", "ML-DSA-65", "Ed25519");
+            super(p, "MLDSA65-Ed25519", "ML-DSA-65", "Ed25519", "SHA-512");
         }
     }
 
     public static final class MLDSA87ECDSAP384SHA512 extends CompositeSignatureImpl {
         public MLDSA87ECDSAP384SHA512(OpenJCEPlusProvider p) {
-            super(p, "MLDSA87-ECDSA-P384-SHA512", "ML-DSA-87", "SHA384withECDSA");
+            super(p, "MLDSA87-ECDSA-P384-SHA512", "ML-DSA-87", "SHA384withECDSA", "SHA-512");
         }
     }
 
     public static final class MLDSA87ECDSABrainpoolP384r1SHA512 extends CompositeSignatureImpl {
         public MLDSA87ECDSABrainpoolP384r1SHA512(OpenJCEPlusProvider p) {
-            super(p, "MLDSA87-ECDSA-brainpoolP384r1-SHA512", "ML-DSA-87", "SHA384withECDSA");
+            super(p, "MLDSA87-ECDSA-brainpoolP384r1-SHA512", "ML-DSA-87",
+                    "SHA384withECDSA", "SHA-512");
         }
     }
 
     public static final class MLDSA87Ed448 extends CompositeSignatureImpl {
         public MLDSA87Ed448(OpenJCEPlusProvider p) {
-            super(p, "MLDSA87-Ed448", "ML-DSA-87", "Ed448");
+            super(p, "MLDSA87-Ed448", "ML-DSA-87", "Ed448", "SHA-512");
         }
     }
 
     public static final class MLDSA87RSA3072PSSSHA512 extends CompositeSignatureImpl {
         public MLDSA87RSA3072PSSSHA512(OpenJCEPlusProvider p) {
-            super(p, "MLDSA87-RSA3072-PSS-SHA512", "ML-DSA-87", "SHA512withRSASSA-PSS");
+            super(p, "MLDSA87-RSA3072-PSS-SHA512", "ML-DSA-87", "SHA512withRSASSA-PSS", "SHA-512");
         }
     }
 
     public static final class MLDSA87RSA4096PSSSHA512 extends CompositeSignatureImpl {
         public MLDSA87RSA4096PSSSHA512(OpenJCEPlusProvider p) {
-            super(p, "MLDSA87-RSA4096-PSS-SHA512", "ML-DSA-87", "SHA512withRSASSA-PSS");
+            super(p, "MLDSA87-RSA4096-PSS-SHA512", "ML-DSA-87", "SHA512withRSASSA-PSS", "SHA-512");
         }
     }
 
     public static final class MLDSA87ECDSAP521SHA512 extends CompositeSignatureImpl {
         public MLDSA87ECDSAP521SHA512(OpenJCEPlusProvider p) {
-            super(p, "MLDSA87-ECDSA-P521-SHA512", "ML-DSA-87", "SHA512withECDSA");
+            super(p, "MLDSA87-ECDSA-P521-SHA512", "ML-DSA-87", "SHA512withECDSA", "SHA-512");
         }
     }
 }
